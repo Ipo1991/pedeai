@@ -11,6 +11,7 @@ const storageKeys = {
   payments: 'payments',
   orders: 'orders',
   cart: 'cart',
+  users: 'users',
 };
 
 interface Profile {
@@ -18,19 +19,34 @@ interface Profile {
   email: string;
   phone: string;
   birthDate: string;
-  notifications?: boolean;
+}
+
+interface User {
+  email: string;
+  password: string;
+  name?: string;
 }
 
 export const getProfile = async (): Promise<Profile> => {
-  await delay(500);
+  await delay(300);
   const data = await AsyncStorage.getItem(storageKeys.profile);
-  return data ? JSON.parse(data) : { name: '', email: '', phone: '', birthDate: new Date().toISOString(), notifications: true };
+  return data
+    ? JSON.parse(data)
+    : { name: '', email: '', phone: '', birthDate: new Date().toISOString() };
 };
 
-export const updateProfile = async (profile: Profile): Promise<Profile> => {
-  await delay(500);
-  await AsyncStorage.setItem(storageKeys.profile, JSON.stringify(profile));
-  return profile;
+// 🔹 Atualizar perfil (agora aceita campos parciais)
+export const updateProfile = async (partialProfile: Partial<Profile>): Promise<Profile> => {
+  await delay(300);
+  const existingData = await AsyncStorage.getItem(storageKeys.profile);
+  const currentProfile: Profile = existingData
+    ? JSON.parse(existingData)
+    : { name: '', email: '', phone: '', birthDate: new Date().toISOString() };
+
+  const updatedProfile: Profile = { ...currentProfile, ...partialProfile };
+
+  await AsyncStorage.setItem(storageKeys.profile, JSON.stringify(updatedProfile));
+  return updatedProfile;
 };
 
 // CRUD Addresses
@@ -169,23 +185,44 @@ export const clearCart = async () => {
   await AsyncStorage.setItem(storageKeys.cart, JSON.stringify({ items: [] }));
 };
 
-// Auth
-export const login = async (email: string, password: string) => {
+// 🔹 Auth
+
+export const register = async (email: string, password: string, name?: string) => {
   await delay(500);
-  if (email && password) {
-    const token = 'fake-token';
-    await AsyncStorage.setItem('token', token);
-    return token;
+
+  const data = await AsyncStorage.getItem(storageKeys.users);
+  const users: User[] = data ? JSON.parse(data) : [];
+
+  if (users.find(u => u.email === email)) {
+    throw new Error('Email já cadastrado');
   }
-  throw new Error('Invalid credentials');
+
+  const newUser: User = { email, password, name };
+  users.push(newUser);
+  await AsyncStorage.setItem(storageKeys.users, JSON.stringify(users));
+
+  const token = 'fake-token';
+  await AsyncStorage.setItem('token', token);
+  return token;
 };
 
-export const register = async (email: string, password: string) => {
+export const login = async (email: string, password: string) => {
   await delay(500);
-  return login(email, password);
+
+  const data = await AsyncStorage.getItem(storageKeys.users);
+  const users: User[] = data ? JSON.parse(data) : [];
+
+  const user = users.find(u => u.email === email && u.password === password);
+  if (!user) {
+    throw new Error('Email ou senha inválidos');
+  }
+
+  const token = 'fake-token';
+  await AsyncStorage.setItem('token', token);
+  return token;
 };
 
 export const logout = async () => {
-  await delay(500);
+  await delay(200);
   await AsyncStorage.removeItem('token');
 };

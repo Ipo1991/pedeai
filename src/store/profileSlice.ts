@@ -6,7 +6,6 @@ interface Profile {
   email: string;
   phone: string;
   birthDate: string;
-  notifications?: boolean;
 }
 
 export const fetchProfile = createAsyncThunk('profile/fetch', async () => {
