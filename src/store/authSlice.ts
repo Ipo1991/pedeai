@@ -27,13 +27,14 @@ export const loginThunk = createAsyncThunk(
 
 export const registerThunk = createAsyncThunk(
   'auth/register',
-  async ({ email, password }: { email: string; password: string }, { rejectWithValue }) => {
+  async (
+    { email, password, name, phone, birthDate }: { email: string; password: string; name: string; phone: string; birthDate: string },
+    { rejectWithValue }
+  ) => {
     try {
-      const token = await register(email, password);
+      const token = await register(email, password, name, phone, birthDate);
       return token;
     } catch (err: any) {
-      // Se o backend retornar algo como { message: 'Email já cadastrado' }
-      // você captura essa mensagem
       const errorMessage = err.response?.data?.message || err.message || 'Erro ao registrar';
       return rejectWithValue(errorMessage);
     }

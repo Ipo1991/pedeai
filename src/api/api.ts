@@ -32,7 +32,7 @@ export const getProfile = async (): Promise<Profile> => {
   const data = await AsyncStorage.getItem(storageKeys.profile);
   return data
     ? JSON.parse(data)
-    : { name: '', email: '', phone: '', birthDate: new Date().toISOString() };
+    : { name: '', email: '', phone: '', birthDate: '' };
 };
 
 // 🔹 Atualizar perfil (agora aceita campos parciais)
@@ -41,12 +41,62 @@ export const updateProfile = async (partialProfile: Partial<Profile>): Promise<P
   const existingData = await AsyncStorage.getItem(storageKeys.profile);
   const currentProfile: Profile = existingData
     ? JSON.parse(existingData)
-    : { name: '', email: '', phone: '', birthDate: new Date().toISOString() };
+    : { name: '', email: '', phone: '', birthDate: '' };
 
   const updatedProfile: Profile = { ...currentProfile, ...partialProfile };
 
   await AsyncStorage.setItem(storageKeys.profile, JSON.stringify(updatedProfile));
   return updatedProfile;
+};
+
+// 🔹 Auth
+export const register = async (email: string, password: string, name?: string, phone?: string, birthDate?: string) => {
+  await delay(500);
+
+  const data = await AsyncStorage.getItem(storageKeys.users);
+  const users: User[] = data ? JSON.parse(data) : [];
+
+  if (users.find(u => u.email === email)) {
+    throw new Error('Email já cadastrado');
+  }
+
+  const newUser: User = { email, password, name };
+  users.push(newUser);
+  await AsyncStorage.setItem(storageKeys.users, JSON.stringify(users));
+
+  // Agora, crie o perfil com os dados adicionais
+  const profileData: Partial<Profile> = {
+    name: name || '',
+    email,
+    phone: phone || '',
+    birthDate: birthDate || '',
+  };
+  await updateProfile(profileData); // Chama a função existente para salvar no 'profile'
+
+  const token = 'fake-token';
+  await AsyncStorage.setItem('token', token);
+  return token;
+};
+
+export const login = async (email: string, password: string) => {
+  await delay(500);
+
+  const data = await AsyncStorage.getItem(storageKeys.users);
+  const users: User[] = data ? JSON.parse(data) : [];
+
+  const user = users.find(u => u.email === email && u.password === password);
+  if (!user) {
+    throw new Error('Email ou senha inválidos');
+  }
+
+  const token = 'fake-token';
+  await AsyncStorage.setItem('token', token);
+  return token;
+};
+
+export const logout = async () => {
+  await delay(200);
+  await AsyncStorage.removeItem('token');
 };
 
 // CRUD Addresses
@@ -183,46 +233,4 @@ export const removeFromCart = async (id: number) => {
 export const clearCart = async () => {
   await delay(500);
   await AsyncStorage.setItem(storageKeys.cart, JSON.stringify({ items: [] }));
-};
-
-// 🔹 Auth
-
-export const register = async (email: string, password: string, name?: string) => {
-  await delay(500);
-
-  const data = await AsyncStorage.getItem(storageKeys.users);
-  const users: User[] = data ? JSON.parse(data) : [];
-
-  if (users.find(u => u.email === email)) {
-    throw new Error('Email já cadastrado');
-  }
-
-  const newUser: User = { email, password, name };
-  users.push(newUser);
-  await AsyncStorage.setItem(storageKeys.users, JSON.stringify(users));
-
-  const token = 'fake-token';
-  await AsyncStorage.setItem('token', token);
-  return token;
-};
-
-export const login = async (email: string, password: string) => {
-  await delay(500);
-
-  const data = await AsyncStorage.getItem(storageKeys.users);
-  const users: User[] = data ? JSON.parse(data) : [];
-
-  const user = users.find(u => u.email === email && u.password === password);
-  if (!user) {
-    throw new Error('Email ou senha inválidos');
-  }
-
-  const token = 'fake-token';
-  await AsyncStorage.setItem('token', token);
-  return token;
-};
-
-export const logout = async () => {
-  await delay(200);
-  await AsyncStorage.removeItem('token');
 };
