@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Switch } from 'react-native';
-import { Button, TextInput as PaperInput, Portal, Modal } from 'react-native-paper';
+import { View, Text, FlatList, StyleSheet, ScrollView } from 'react-native';
+import { Button, TextInput as PaperInput, Card, Portal, Modal, Switch } from 'react-native-paper';
 import { useForm, Controller, SubmitHandler } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -8,8 +8,6 @@ import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { fetchPayments, createPaymentThunk, updatePaymentThunk, deletePaymentThunk } from '../store/paymentSlice';
 import { RootState } from '../store/store';
 import { Picker } from '@react-native-picker/picker';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { MaskedTextInput } from 'react-native-mask-text';
 
 interface Payment {
   id: number;
@@ -29,20 +27,22 @@ const schema = yup.object({
   expiry: yup.string().required('Obrigatório'),
   cvv: yup.string().length(3, 'Exato 3 dígitos').required('Obrigatório'),
   name: yup.string().required('Obrigatório'),
-  isDefault: yup.boolean().required('Obrigatório'),
+  isDefault: yup.boolean().required(),
 }).required();
 
 const PaymentScreen = () => {
   const dispatch = useAppDispatch();
   const payments = useAppSelector((state: RootState) => state.payments.data) as Payment[];
+
   const [modalVisible, setModalVisible] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+
   const { control, handleSubmit, reset, formState: { errors } } = useForm<PaymentForm>({
-    resolver: yupResolver<PaymentForm, any, any>(schema),
+    resolver: yupResolver(schema),
     defaultValues: {
       type: 'credit',
       cardNumber: '',
-      expiry: new Date().toISOString(),
+      expiry: '',
       cvv: '',
       name: '',
       isDefault: false,
@@ -64,14 +64,7 @@ const PaymentScreen = () => {
   };
 
   const editPayment = (payment: Payment) => {
-    reset({
-      type: payment.type,
-      cardNumber: payment.cardNumber,
-      expiry: payment.expiry,
-      cvv: payment.cvv,
-      name: payment.name,
-      isDefault: payment.isDefault,
-    });
+    reset(payment);
     setEditingId(payment.id);
     setModalVisible(true);
   };
@@ -81,92 +74,228 @@ const PaymentScreen = () => {
   };
 
   return (
-    <View style={{ padding: 20, flex: 1 }}>
-      <Text style={{ fontSize: 24, marginBottom: 20 }}>Formas de Pagamento</Text>
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.title}>Formas de Pagamento</Text>
+
       <FlatList
         data={payments}
-        keyExtractor={item => item.id.toString()}
+        keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
-          <View style={{ marginBottom: 10, padding: 10, borderWidth: 1 }}>
-            <Text>{item.type} - {item.cardNumber} - {item.name}</Text>
-            <TouchableOpacity onPress={() => editPayment(item)}>
-              <Text style={{ color: 'blue' }}>Editar</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => deletePay(item.id)}>
-              <Text style={{ color: 'red' }}>Deletar</Text>
-            </TouchableOpacity>
-          </View>
+          <Card style={styles.card}>
+            <Card.Content>
+              <Text style={styles.label}>Tipo:</Text>
+              <Text style={styles.value}>{item.type === 'credit' ? 'Crédito' : 'Débito'}</Text>
+
+              <Text style={styles.label}>Número do Cartão:</Text>
+              <Text style={styles.value}>{item.cardNumber}</Text>
+
+              <Text style={styles.label}>Validade:</Text>
+              <Text style={styles.value}>{item.expiry}</Text>
+
+              <Text style={styles.label}>Nome no Cartão:</Text>
+              <Text style={styles.value}>{item.name}</Text>
+
+              {item.isDefault && (
+                <Text style={[styles.value, { color: '#b71c1c', fontWeight: '600' }]}>
+                  Método Padrão
+                </Text>
+              )}
+
+              <View style={styles.cardButtons}>
+                <Button
+                  mode="outlined"
+                  textColor="#b71c1c"
+                  style={styles.cardButton}
+                  onPress={() => editPayment(item)}
+                >
+                  Editar
+                </Button>
+                <Button
+                  mode="contained"
+                  buttonColor="#b71c1c"
+                  textColor="white"
+                  style={styles.cardButton}
+                  onPress={() => deletePay(item.id)}
+                >
+                  Excluir
+                </Button>
+              </View>
+            </Card.Content>
+          </Card>
         )}
       />
-      <Button onPress={() => { setEditingId(null); reset(); setModalVisible(true); }}>
+
+      <Button
+        mode="contained"
+        buttonColor="#b71c1c"
+        textColor="white"
+        style={styles.addButton}
+        onPress={() => {
+          setEditingId(null);
+          reset();
+          setModalVisible(true);
+        }}
+      >
         Adicionar Pagamento
       </Button>
+
       <Portal>
-        <Modal visible={modalVisible} onDismiss={() => setModalVisible(false)} contentContainerStyle={{ backgroundColor: 'white', padding: 20, margin: 20 }}>
-          <Controller
-            control={control}
-            name="type"
-            render={({ field: { onChange, value } }) => (
-              <Picker selectedValue={value} onValueChange={onChange}>
-                <Picker.Item label="Crédito" value="credit" />
-                <Picker.Item label="Débito" value="debit" />
-              </Picker>
-            )}
-          />
-          {errors.type && <Text>{errors.type.message}</Text>}
-          <Controller
-            control={control}
-            name="cardNumber"
-            render={({ field: { onChange, value } }) => (
-              <View>
-                <Text>Número do Cartão</Text>
-                <MaskedTextInput mask="9999 9999 9999 9999" value={value} onChangeText={onChange} style={{ borderWidth: 1, padding: 10 }} />
-              </View>
-            )}
-          />
-          {errors.cardNumber && <Text>{errors.cardNumber.message}</Text>}
-          <Controller
-            control={control}
-            name="expiry"
-            render={({ field: { onChange, value } }) => (
-              <View>
-                <Text>Validade</Text>
-                <DateTimePicker value={new Date(value || Date.now())} mode="date" onChange={(_, date) => onChange(date?.toISOString())} />
-              </View>
-            )}
-          />
-          {errors.expiry && <Text>{errors.expiry.message}</Text>}
-          <Controller
-            control={control}
-            name="cvv"
-            render={({ field: { onChange, value } }) => (
-              <PaperInput label="CVV" value={value} onChangeText={onChange} maxLength={3} error={!!errors.cvv} />
-            )}
-          />
-          {errors.cvv && <Text>{errors.cvv.message}</Text>}
-          <Controller
-            control={control}
-            name="name"
-            render={({ field: { onChange, value } }) => (
-              <PaperInput label="Nome no Cartão" value={value} onChangeText={onChange} error={!!errors.name} />
-            )}
-          />
-          {errors.name && <Text>{errors.name.message}</Text>}
-          <Controller
-            control={control}
-            name="isDefault"
-            render={({ field: { onChange, value } }) => (
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Text>Padrão</Text>
-                <Switch value={value} onValueChange={onChange} />
-              </View>
-            )}
-          />
-          <Button mode="contained" onPress={handleSubmit(onSubmit)}>Salvar</Button>
+        <Modal
+          visible={modalVisible}
+          onDismiss={() => setModalVisible(false)}
+          contentContainerStyle={styles.modalContent}
+        >
+          <Text style={styles.modalTitle}>
+            {editingId ? 'Editar Pagamento' : 'Novo Pagamento'}
+          </Text>
+          <ScrollView>
+            {/* Tipo */}
+            <Controller
+              control={control}
+              name="type"
+              render={({ field: { onChange, value } }) => (
+                <View style={styles.pickerContainer}>
+                  <Text style={styles.label}>Tipo:</Text>
+                  <Picker
+                    selectedValue={value}
+                    onValueChange={onChange}
+                    style={styles.picker}
+                  >
+                    <Picker.Item label="Crédito" value="credit" />
+                    <Picker.Item label="Débito" value="debit" />
+                  </Picker>
+                </View>
+              )}
+            />
+            {errors.type && <Text style={styles.error}>{errors.type.message}</Text>}
+
+            {/* Número do Cartão */}
+            <Controller
+              control={control}
+              name="cardNumber"
+              render={({ field: { onChange, value } }) => (
+                <PaperInput
+                  label="Número do Cartão"
+                  value={value}
+                  onChangeText={onChange}
+                  error={!!errors.cardNumber}
+                  style={styles.input}
+                  left={<PaperInput.Icon icon="credit-card" color="#b71c1c" />}
+                  activeUnderlineColor="#b71c1c"
+                />
+              )}
+            />
+            {errors.cardNumber && <Text style={styles.error}>{errors.cardNumber.message}</Text>}
+
+            {/* Validade */}
+            <Controller
+              control={control}
+              name="expiry"
+              render={({ field: { onChange, value } }) => (
+                <PaperInput
+                  label="Validade (MM/AA)"
+                  value={value}
+                  onChangeText={onChange}
+                  error={!!errors.expiry}
+                  style={styles.input}
+                  left={<PaperInput.Icon icon="calendar" color="#b71c1c" />}
+                  activeUnderlineColor="#b71c1c"
+                />
+              )}
+            />
+            {errors.expiry && <Text style={styles.error}>{errors.expiry.message}</Text>}
+
+            {/* CVV */}
+            <Controller
+              control={control}
+              name="cvv"
+              render={({ field: { onChange, value } }) => (
+                <PaperInput
+                  label="CVV"
+                  value={value}
+                  onChangeText={onChange}
+                  error={!!errors.cvv}
+                  style={styles.input}
+                  left={<PaperInput.Icon icon="lock" color="#b71c1c" />}
+                  activeUnderlineColor="#b71c1c"
+                  maxLength={3}
+                />
+              )}
+            />
+            {errors.cvv && <Text style={styles.error}>{errors.cvv.message}</Text>}
+
+            {/* Nome no Cartão */}
+            <Controller
+              control={control}
+              name="name"
+              render={({ field: { onChange, value } }) => (
+                <PaperInput
+                  label="Nome no Cartão"
+                  value={value}
+                  onChangeText={onChange}
+                  error={!!errors.name}
+                  style={styles.input}
+                  left={<PaperInput.Icon icon="account" color="#b71c1c" />}
+                  activeUnderlineColor="#b71c1c"
+                />
+              )}
+            />
+            {errors.name && <Text style={styles.error}>{errors.name.message}</Text>}
+
+            {/* Método padrão */}
+            <Controller
+              control={control}
+              name="isDefault"
+              render={({ field: { onChange, value } }) => (
+                <View style={styles.switchRow}>
+                  <Text style={styles.label}>Método Padrão</Text>
+                  <Switch value={value} onValueChange={onChange} color="#b71c1c" />
+                </View>
+              )}
+            />
+
+            <Button
+              mode="contained"
+              onPress={handleSubmit(onSubmit)}
+              buttonColor="#b71c1c"
+              textColor="white"
+              style={styles.saveButton}
+            >
+              Salvar
+            </Button>
+
+            <Button
+              mode="outlined"
+              onPress={() => setModalVisible(false)}
+              style={[styles.saveButton, { marginTop: 8 }]}
+              textColor="#b71c1c"
+            >
+              Cancelar
+            </Button>
+          </ScrollView>
         </Modal>
       </Portal>
-    </View>
+    </ScrollView>
   );
 };
 
 export default PaymentScreen;
+
+const styles = StyleSheet.create({
+  container: { padding: 20, paddingBottom: 40 },
+  title: { fontSize: 28, fontWeight: '700', marginBottom: 20, textAlign: 'center', color: '#b71c1c' },
+  card: { marginBottom: 12, borderRadius: 12, backgroundColor: '#ffe5e5' },
+  label: { fontWeight: '500', color: '#333', marginTop: 6 },
+  value: { fontSize: 16, color: '#333', marginBottom: 4 },
+  cardButtons: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
+  cardButton: { flex: 1, marginHorizontal: 4, borderRadius: 8 },
+  addButton: { marginTop: 16, borderRadius: 8 },
+  input: { marginVertical: 8, backgroundColor: '#fff' },
+  error: { color: 'red', marginBottom: 4 },
+  modalContent: { backgroundColor: '#fff', borderRadius: 12, padding: 20, margin: 20, maxHeight: '90%' },
+  modalTitle: { fontSize: 22, fontWeight: '700', marginBottom: 16, textAlign: 'center', color: '#b71c1c' },
+  pickerContainer: { marginVertical: 8, backgroundColor: '#fff', borderRadius: 8, borderWidth: 1, borderColor: '#ccc' },
+  picker: { height: 50, width: '100%' },
+  switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 },
+  saveButton: { marginTop: 16, borderRadius: 8 },
+});
