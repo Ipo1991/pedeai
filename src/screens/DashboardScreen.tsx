@@ -161,7 +161,7 @@ const DashboardScreen: React.FC = () => {
               buttonColor="#b71c1c"
               textColor="white"
             >
-              Carrinho
+              Restaurantes
             </Button>
 
             <Button

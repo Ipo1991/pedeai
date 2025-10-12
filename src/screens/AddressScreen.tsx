@@ -7,7 +7,6 @@ import * as yup from 'yup';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { fetchAddresses, createAddressThunk, updateAddressThunk, deleteAddressThunk } from '../store/addressSlice';
 import { RootState } from '../store/store';
-import { Picker } from '@react-native-picker/picker';
 
 interface Address {
   id: number;
@@ -20,36 +19,6 @@ interface Address {
 }
 
 type AddressForm = Omit<Address, 'id'>;
-
-const BRAZILIAN_STATES = [
-  { label: 'Acre (AC)', value: 'AC' },
-  { label: 'Alagoas (AL)', value: 'AL' },
-  { label: 'Amapá (AP)', value: 'AP' },
-  { label: 'Amazonas (AM)', value: 'AM' },
-  { label: 'Bahia (BA)', value: 'BA' },
-  { label: 'Ceará (CE)', value: 'CE' },
-  { label: 'Distrito Federal (DF)', value: 'DF' },
-  { label: 'Espírito Santo (ES)', value: 'ES' },
-  { label: 'Goiás (GO)', value: 'GO' },
-  { label: 'Maranhão (MA)', value: 'MA' },
-  { label: 'Mato Grosso (MT)', value: 'MT' },
-  { label: 'Mato Grosso do Sul (MS)', value: 'MS' },
-  { label: 'Minas Gerais (MG)', value: 'MG' },
-  { label: 'Pará (PA)', value: 'PA' },
-  { label: 'Paraíba (PB)', value: 'PB' },
-  { label: 'Paraná (PR)', value: 'PR' },
-  { label: 'Pernambuco (PE)', value: 'PE' },
-  { label: 'Piauí (PI)', value: 'PI' },
-  { label: 'Rio de Janeiro (RJ)', value: 'RJ' },
-  { label: 'Rio Grande do Norte (RN)', value: 'RN' },
-  { label: 'Rio Grande do Sul (RS)', value: 'RS' },
-  { label: 'Rondônia (RO)', value: 'RO' },
-  { label: 'Roraima (RR)', value: 'RR' },
-  { label: 'Santa Catarina (SC)', value: 'SC' },
-  { label: 'São Paulo (SP)', value: 'SP' },
-  { label: 'Sergipe (SE)', value: 'SE' },
-  { label: 'Tocantins (TO)', value: 'TO' },
-];
 
 const schema = yup.object({
   street: yup.string().required('Obrigatório'),
@@ -73,7 +42,7 @@ const AddressScreen = () => {
       street: '',
       number: '',
       city: '',
-      state: 'SP',
+      state: '',
       zip: '',
       isDefault: false,
     },
@@ -184,9 +153,10 @@ const AddressScreen = () => {
                   value={value}
                   onChangeText={onChange}
                   error={!!errors.street}
-                  style={styles.input}
+                  style={[styles.input, styles.textInput]}
                   left={<PaperInput.Icon icon="home" color="#b71c1c" />}
                   activeUnderlineColor="#b71c1c"
+                  textColor="#000"
                 />
               )}
             />
@@ -202,9 +172,10 @@ const AddressScreen = () => {
                   value={value}
                   onChangeText={onChange}
                   error={!!errors.number}
-                  style={styles.input}
+                  style={[styles.input, styles.textInput]}
                   left={<PaperInput.Icon icon="numeric" color="#b71c1c" />}
                   activeUnderlineColor="#b71c1c"
+                  textColor="#000"
                 />
               )}
             />
@@ -220,31 +191,30 @@ const AddressScreen = () => {
                   value={value}
                   onChangeText={onChange}
                   error={!!errors.city}
-                  style={styles.input}
+                  style={[styles.input, styles.textInput]}
                   left={<PaperInput.Icon icon="city" color="#b71c1c" />}
                   activeUnderlineColor="#b71c1c"
+                  textColor="#000"
                 />
               )}
             />
             {errors.city && <Text style={styles.error}>{errors.city.message}</Text>}
 
-            {/* Estado */}
+            {/* Estado (agora digitável) */}
             <Controller
               control={control}
               name="state"
               render={({ field: { onChange, value } }) => (
-                <View style={styles.pickerContainer}>
-                  <Text style={styles.label}>Estado:</Text>
-                  <Picker
-                    selectedValue={value}
-                    onValueChange={onChange}
-                    style={styles.picker}
-                  >
-                    {BRAZILIAN_STATES.map((state) => (
-                      <Picker.Item key={state.value} label={state.label} value={state.value} />
-                    ))}
-                  </Picker>
-                </View>
+                <PaperInput
+                  label="Estado"
+                  value={value}
+                  onChangeText={onChange}
+                  error={!!errors.state}
+                  style={[styles.input, styles.textInput]}
+                  left={<PaperInput.Icon icon="map" color="#b71c1c" />}
+                  activeUnderlineColor="#b71c1c"
+                  textColor="#000"
+                />
               )}
             />
             {errors.state && <Text style={styles.error}>{errors.state.message}</Text>}
@@ -259,9 +229,10 @@ const AddressScreen = () => {
                   value={value}
                   onChangeText={onChange}
                   error={!!errors.zip}
-                  style={styles.input}
+                  style={[styles.input, styles.textInput]}
                   left={<PaperInput.Icon icon="map-marker" color="#b71c1c" />}
                   activeUnderlineColor="#b71c1c"
+                  textColor="#000"
                 />
               )}
             />
@@ -316,11 +287,10 @@ const styles = StyleSheet.create({
   cardButton: { flex: 1, marginHorizontal: 4, borderRadius: 8 },
   addButton: { marginTop: 16, borderRadius: 8 },
   input: { marginVertical: 8, backgroundColor: '#fff' },
+  textInput: { color: '#000' },
   error: { color: 'red', marginBottom: 4 },
   modalContent: { backgroundColor: '#fff', borderRadius: 12, padding: 20, margin: 20, maxHeight: '90%' },
   modalTitle: { fontSize: 22, fontWeight: '700', marginBottom: 16, textAlign: 'center', color: '#b71c1c' },
-  pickerContainer: { marginVertical: 8, backgroundColor: '#fff', borderRadius: 8, borderWidth: 1, borderColor: '#ccc' },
-  picker: { height: 50, width: '100%' },
   switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 },
   saveButton: { marginTop: 16, borderRadius: 8 },
 });

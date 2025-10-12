@@ -30,7 +30,7 @@ const LoginScreen: React.FC = () => {
     defaultValues: { email: '', password: '' },
   });
 
-   useFocusEffect(
+  useFocusEffect(
     useCallback(() => {
       dispatch(clearError());
     }, [dispatch])
@@ -44,7 +44,6 @@ const LoginScreen: React.FC = () => {
     dispatch(loginThunk(data));
   };
 
-  // Limpa erro ao digitar
   const handleChangeEmail = (text: string) => {
     dispatch(clearError());
     setValue('email', text);
@@ -83,7 +82,9 @@ const LoginScreen: React.FC = () => {
                 onChangeText={handleChangeEmail}
                 error={!!errors.email}
                 left={<PaperInput.Icon icon="email" color="#b71c1c" />}
-                activeUnderlineColor="#ffffffff"
+                activeUnderlineColor="#b71c1c"
+                style={styles.input}
+                textColor="#000"
               />
             )}
           />
@@ -105,7 +106,9 @@ const LoginScreen: React.FC = () => {
                 secureTextEntry
                 error={!!errors.password}
                 left={<PaperInput.Icon icon="lock" color="#b71c1c" />}
-                activeUnderlineColor="#ffffffff"
+                activeUnderlineColor="#b71c1c"
+                style={styles.input}
+                textColor="#000"
               />
             )}
           />
@@ -130,10 +133,10 @@ const LoginScreen: React.FC = () => {
 
       {/* Links */}
       <View style={styles.linksContainer}>
-        <Button textColor="#d32f2f" onPress={() => navigation.navigate('Register')}>
+        <Button textColor="#b71c1c" onPress={() => navigation.navigate('Register')}>
           Cadastrar
         </Button>
-        <Button textColor="#d32f2f" onPress={() => setForgotVisible(true)}>
+        <Button textColor="#b71c1c" onPress={() => setForgotVisible(true)}>
           Esqueci a senha
         </Button>
       </View>
@@ -143,27 +146,29 @@ const LoginScreen: React.FC = () => {
         <Modal
           visible={forgotVisible}
           onDismiss={() => setForgotVisible(false)}
-          contentContainerStyle={styles.modalBackdrop}
+          contentContainerStyle={styles.modalContent}
         >
+          <Text style={styles.modalTitle}>Recuperar Senha</Text>
           <Card style={styles.modalCard}>
             <Card.Content>
               {emailSent ? (
                 <Text style={styles.successText}>📧 Email de recuperação enviado com sucesso!</Text>
               ) : (
                 <>
-                  <Text style={styles.modalTitle}>Recuperar Senha</Text>
                   <PaperInput
                     label="Email"
                     value={forgotEmail}
                     onChangeText={setForgotEmail}
                     left={<PaperInput.Icon icon="email" color="#b71c1c" />}
-                    activeUnderlineColor="#ffffffff"
+                    activeUnderlineColor="#b71c1c"
+                    style={styles.input}
+                    textColor="#000"
                   />
                   <Button
                     mode="contained"
                     onPress={handleForgotPassword}
-                    style={styles.sendButton}
-                    buttonColor={forgotEmail ? "#b71c1c" : "#f28b82"}
+                    style={styles.saveButton}
+                    buttonColor={forgotEmail ? '#b71c1c' : '#f28b82'}
                     textColor="white"
                   >
                     Enviar Email
@@ -171,7 +176,7 @@ const LoginScreen: React.FC = () => {
                   <Button
                     mode="outlined"
                     onPress={() => setForgotVisible(false)}
-                    style={styles.cancelButton}
+                    style={[styles.saveButton, { marginTop: 8 }]}
                     textColor="#b71c1c"
                   >
                     Cancelar
@@ -189,17 +194,50 @@ const LoginScreen: React.FC = () => {
 export default LoginScreen;
 
 const styles = StyleSheet.create({
-  container: { padding: 20, paddingTop: 60 },
-  logo: { fontSize: 36, fontWeight: '700', textAlign: 'center', marginBottom: 10, color: '#b71c1c' },
+  container: { padding: 20, paddingTop: 60, paddingBottom: 40 },
+  logo: { fontSize: 36, fontWeight: '700', textAlign: 'center', color: '#b71c1c' },
   subtitle: { fontSize: 16, textAlign: 'center', marginBottom: 30, color: '#444' },
-  card: { marginBottom: 15 },
+  card: {
+    marginBottom: 12,
+    borderRadius: 12,
+    backgroundColor: '#ffe5e5',
+  },
+  input: {
+    marginVertical: 4,
+    backgroundColor: '#fff',
+  },
   error: { color: 'red', marginTop: 4, textAlign: 'center' },
-  loginButton: { marginTop: 20, paddingVertical: 5 },
-  linksContainer: { marginTop: 10, flexDirection: 'row', justifyContent: 'space-between' },
-  modalBackdrop: { backgroundColor: 'rgba(0,0,0,0.3)', paddingHorizontal: 20, justifyContent: 'center', flex: 1 },
-  modalCard: { backgroundColor: '#fff', borderRadius: 12, padding: 10, elevation: 6 },
-  modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 10, color: '#b71c1c', textAlign: 'center' },
-  sendButton: { marginTop: 15, borderRadius: 8, paddingVertical: 4 },
-  cancelButton: { marginTop: 8, borderColor: '#b71c1c' },
-  successText: { fontSize: 16, color: 'green', textAlign: 'center', fontWeight: '500' },
+  loginButton: { marginTop: 20, borderRadius: 8 },
+  linksContainer: {
+    marginTop: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+    margin: 20,
+  },
+  modalCard: {
+    backgroundColor: '#ffe5e5',
+    borderRadius: 12,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 12,
+    textAlign: 'center',
+    color: '#b71c1c',
+  },
+  successText: {
+    fontSize: 16,
+    color: 'green',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  saveButton: {
+    marginTop: 16,
+    borderRadius: 8,
+  },
 });

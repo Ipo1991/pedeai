@@ -1,3 +1,4 @@
+// screens/PaymentScreen.tsx
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, ScrollView } from 'react-native';
 import { Button, TextInput as PaperInput, Card, Portal, Modal, Switch } from 'react-native-paper';
@@ -154,17 +155,16 @@ const PaymentScreen = () => {
               control={control}
               name="type"
               render={({ field: { onChange, value } }) => (
-                <View style={styles.pickerContainer}>
-                  <Text style={styles.label}>Tipo:</Text>
-                  <Picker
-                    selectedValue={value}
-                    onValueChange={onChange}
-                    style={styles.picker}
-                  >
-                    <Picker.Item label="Crédito" value="credit" />
-                    <Picker.Item label="Débito" value="debit" />
-                  </Picker>
-                </View>
+                <PaperInput
+                  label="Tipo (Crédito/Débito)"
+                  value={value}
+                  onChangeText={onChange}
+                  error={!!errors.type}
+                  style={styles.input}
+                  textColor="#000"
+                  left={<PaperInput.Icon icon="credit-card" color="#b71c1c" />}
+                  activeUnderlineColor="#b71c1c"
+                />
               )}
             />
             {errors.type && <Text style={styles.error}>{errors.type.message}</Text>}
@@ -180,6 +180,7 @@ const PaymentScreen = () => {
                   onChangeText={onChange}
                   error={!!errors.cardNumber}
                   style={styles.input}
+                  textColor="#000"
                   left={<PaperInput.Icon icon="credit-card" color="#b71c1c" />}
                   activeUnderlineColor="#b71c1c"
                 />
@@ -198,6 +199,7 @@ const PaymentScreen = () => {
                   onChangeText={onChange}
                   error={!!errors.expiry}
                   style={styles.input}
+                  textColor="#000"
                   left={<PaperInput.Icon icon="calendar" color="#b71c1c" />}
                   activeUnderlineColor="#b71c1c"
                 />
@@ -216,6 +218,7 @@ const PaymentScreen = () => {
                   onChangeText={onChange}
                   error={!!errors.cvv}
                   style={styles.input}
+                  textColor="#000"
                   left={<PaperInput.Icon icon="lock" color="#b71c1c" />}
                   activeUnderlineColor="#b71c1c"
                   maxLength={3}
@@ -235,6 +238,7 @@ const PaymentScreen = () => {
                   onChangeText={onChange}
                   error={!!errors.name}
                   style={styles.input}
+                  textColor="#000"
                   left={<PaperInput.Icon icon="account" color="#b71c1c" />}
                   activeUnderlineColor="#b71c1c"
                 />
@@ -294,8 +298,6 @@ const styles = StyleSheet.create({
   error: { color: 'red', marginBottom: 4 },
   modalContent: { backgroundColor: '#fff', borderRadius: 12, padding: 20, margin: 20, maxHeight: '90%' },
   modalTitle: { fontSize: 22, fontWeight: '700', marginBottom: 16, textAlign: 'center', color: '#b71c1c' },
-  pickerContainer: { marginVertical: 8, backgroundColor: '#fff', borderRadius: 8, borderWidth: 1, borderColor: '#ccc' },
-  picker: { height: 50, width: '100%' },
   switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 },
   saveButton: { marginTop: 16, borderRadius: 8 },
 });
