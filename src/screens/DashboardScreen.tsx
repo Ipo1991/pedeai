@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useMemo } from 'react';
+// DashboardScreen.tsx (versão atualizada)
+import React, { useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   SafeAreaView,
   StyleSheet,
@@ -13,9 +14,8 @@ import { fetchOrders } from '../store/orderSlice';
 import { logoutThunk } from '../store/authSlice';
 import { RootState } from '../store/store';
 import { BarChart } from 'react-native-chart-kit';
-import { Button, Card } from 'react-native-paper';
-import { useNavigation } from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import { Button, Card, ActivityIndicator } from 'react-native-paper';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 
 const DashboardScreen: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -25,20 +25,39 @@ const DashboardScreen: React.FC = () => {
 
   const orders = useAppSelector((state: RootState) => state.orders.data ?? []);
   const token = useAppSelector((state: RootState) => state.auth.token);
+  const loadingOrders = useAppSelector((state: RootState) => state.orders.loading); // se tiver
 
+  // primeira busca e animação
   useEffect(() => {
-    if (token) dispatch(fetchOrders());
-
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 600,
-      useNativeDriver: true,
-    }).start();
+    if (token) {
+      dispatch(fetchOrders());
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }).start();
+    }
   }, [dispatch, token]);
+
+  // refetch ao voltar ao foco e reiniciar animação
+  useFocusEffect(
+    useCallback(() => {
+      if (token) {
+        dispatch(fetchOrders());
+      }
+      // reinicia animação visualmente agradável
+      fadeAnim.setValue(0);
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }).start();
+    }, [dispatch, token])
+  );
 
   const handleLogout = () => dispatch(logoutThunk());
 
-  // Dados do gráfico: últimos 5 meses
+  // Dados do gráfico (últimos 5 meses)
   const monthlyData = useMemo(() => {
     const now = new Date();
     const months = Array.from({ length: 5 }).map((_, i) => {
@@ -65,6 +84,15 @@ const DashboardScreen: React.FC = () => {
     datasets: [{ data: monthlyData.counts }],
   };
 
+  // se quiser mostrar loading visual enquanto carrega (opcional)
+  if (loadingOrders) {
+    return (
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#b71c1c" />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll}>
@@ -74,8 +102,10 @@ const DashboardScreen: React.FC = () => {
 
           <Card style={styles.chartCard}>
             <Card.Content>
-              <View style={{ alignItems: 'center' }}>
+              <View style={{ alignItems: 'center', backgroundColor: '#ffe5e5', borderRadius: 12 }}>
+                {/* key força remount quando os dados mudam */}
                 <BarChart
+                  key={barData.datasets[0].data.join(',') + '-' + orders.length}
                   data={barData}
                   width={Math.min(Math.max(320, width - 40), 900)}
                   height={260}
@@ -86,8 +116,10 @@ const DashboardScreen: React.FC = () => {
                   chartConfig={{
                     backgroundGradientFrom: '#ffcccc',
                     backgroundGradientTo: '#ffe5e5',
+                    backgroundGradientFromOpacity: 1,
+                    backgroundGradientToOpacity: 1,
                     decimalPlaces: 0,
-                    color: (opacity = 1) => `rgba(255, 50, 50, ${opacity})`,
+                    color: (opacity = 1) => `rgba(183, 28, 28, ${opacity})`,
                     labelColor: (opacity = 1) => `rgba(80, 0, 0, ${opacity})`,
                     style: { borderRadius: 16 },
                     propsForBackgroundLines: {
@@ -100,7 +132,6 @@ const DashboardScreen: React.FC = () => {
             </Card.Content>
           </Card>
 
-
           <Card style={styles.summaryCard}>
             <Card.Content>
               <Text style={styles.totalTitle}>Total de Pedidos</Text>
@@ -109,70 +140,12 @@ const DashboardScreen: React.FC = () => {
           </Card>
 
           <View style={styles.buttons}>
-             <Button
-              mode="contained"
-              icon="account"
-              onPress={() => navigation.navigate('Profile')}
-              style={styles.button}
-              buttonColor="#b71c1c"
-              textColor="white"
-            >
-              Perfil
-            </Button>
-
-            <Button
-              mode="contained"
-              icon="map-marker"
-              onPress={() => navigation.navigate('Addresses')}
-              style={styles.button}
-              buttonColor="#b71c1c"
-              textColor="white"
-            >
-              Endereços
-            </Button>
-
-            <Button
-              mode="contained"
-              icon="credit-card"
-              onPress={() => navigation.navigate('Payments')}
-              style={styles.button}
-              buttonColor="#b71c1c"
-              textColor="white"
-            >
-              Pagamentos
-            </Button>
-
-            <Button
-              mode="contained"
-              icon="history"
-              onPress={() => navigation.navigate('OrderHistory')}
-              style={styles.button}
-              buttonColor="#b71c1c"
-              textColor="white"
-            >
-              Histórico
-            </Button>
-
-            <Button
-              mode="contained"
-              icon="cart"
-              onPress={() => navigation.navigate('Cart')}
-              style={styles.button}
-              buttonColor="#b71c1c"
-              textColor="white"
-            >
-              Restaurantes
-            </Button>
-
-            <Button
-              mode="contained"
-              icon="logout"
-              onPress={handleLogout}
-              style={[styles.button, styles.logoutButton]}
-              textColor="white"
-            >
-              Sair
-            </Button>
+            <Button mode="contained" icon="account" onPress={() => navigation.navigate('Profile')} style={styles.button} buttonColor="#b71c1c" textColor="white">Perfil</Button>
+            <Button mode="contained" icon="map-marker" onPress={() => navigation.navigate('Addresses')} style={styles.button} buttonColor="#b71c1c" textColor="white">Endereços</Button>
+            <Button mode="contained" icon="credit-card" onPress={() => navigation.navigate('Payments')} style={styles.button} buttonColor="#b71c1c" textColor="white">Pagamentos</Button>
+            <Button mode="contained" icon="history" onPress={() => navigation.navigate('OrderHistory')} style={styles.button} buttonColor="#b71c1c" textColor="white">Histórico</Button>
+            <Button mode="contained" icon="cart" onPress={() => navigation.navigate('Cart')} style={styles.button} buttonColor="#b71c1c" textColor="white">Restaurantes</Button>
+            <Button mode="contained" icon="logout" onPress={handleLogout} style={[styles.button, styles.logoutButton]} textColor="white">Sair</Button>
           </View>
         </Animated.View>
       </ScrollView>

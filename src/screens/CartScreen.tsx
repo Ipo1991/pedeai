@@ -11,6 +11,7 @@ import {
 } from '../store/cartSlice';
 import { createOrderThunk } from '../store/orderSlice';
 import { RootState } from '../store/store';
+import { useNavigation } from '@react-navigation/native'; //adc poke
 
 interface MenuItem {
   id: number;
@@ -60,6 +61,7 @@ const restaurants: Restaurant[] = [
 ];
 
 const RestaurantsScreen: React.FC = () => {
+  const navigation = useNavigation<any>(); // add poke
   const dispatch = useAppDispatch();
   const cart = useAppSelector((state: RootState) => state.cart.data) || { items: [] };
 
@@ -75,22 +77,9 @@ const RestaurantsScreen: React.FC = () => {
     dispatch(removeFromCartThunk(id));
   };
 
-  const finalizeOrder = () => {
-    const total: number = cart.items.reduce(
-      (sum: number, item: CartItem) => sum + item.price * item.quantity,
-      0
-    );
+  const finalizeOrder = () => { // add daniel
 
-    dispatch(
-      createOrderThunk({
-        items: cart.items,
-        total,
-        status: 'pending',
-        date: new Date().toISOString(),
-        cancelled: false,
-      })
-    );
-    dispatch(clearCartThunk());
+    navigation.navigate('Checkout'); //  apenas navega para a nova tela.
   };
 
   return (

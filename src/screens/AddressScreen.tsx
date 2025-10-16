@@ -7,6 +7,10 @@ import * as yup from 'yup';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { fetchAddresses, createAddressThunk, updateAddressThunk, deleteAddressThunk } from '../store/addressSlice';
 import { RootState } from '../store/store';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native'; 
+import { NativeStackNavigationProp } from '@react-navigation/native-stack'; 
+import { RootStackParamList } from '../navigation/Navigation'; 
+
 
 interface Address {
   id: number;
@@ -17,7 +21,8 @@ interface Address {
   zip: string;
   isDefault: boolean;
 }
-
+type AddressScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Addresses'>;
+type AddressScreenRouteProp = RouteProp<RootStackParamList, 'Addresses'>;
 type AddressForm = Omit<Address, 'id'>;
 
 const schema = yup.object({
@@ -30,6 +35,9 @@ const schema = yup.object({
 }).required();
 
 const AddressScreen = () => {
+  const navigation = useNavigation<AddressScreenNavigationProp>(); 
+  const route = useRoute<AddressScreenRouteProp>(); 
+  const fromCheckout = route.params?.fromCheckout; 
   const dispatch = useAppDispatch();
   const addresses = useAppSelector((state: RootState) => state.addresses.data) as Address[];
 
@@ -52,12 +60,21 @@ const AddressScreen = () => {
     dispatch(fetchAddresses());
   }, [dispatch]);
 
-  const onSubmit: SubmitHandler<AddressForm> = (data) => {
+  const onSubmit: SubmitHandler<AddressForm> = async (data) => {
     if (editingId) {
-      dispatch(updateAddressThunk({ id: editingId, address: data }));
+      await dispatch(updateAddressThunk({ id: editingId, address: data }));
     } else {
-      dispatch(createAddressThunk(data));
+      const resultAction = await dispatch(createAddressThunk(data));
+      // Verifica se a ação foi bem-sucedida e se veio do checkout
+      if (createAddressThunk.fulfilled.match(resultAction) && fromCheckout) {
+        const newAddress = resultAction.payload;
+        navigation.navigate('Checkout', { newAddressId: newAddress.id });
+        setModalVisible(false);
+        reset();
+        return; // Para a execução para não fechar o modal duas vezes
+      }
     }
+    // Comportamento padrão
     setModalVisible(false);
     reset();
   };

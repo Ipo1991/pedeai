@@ -9,6 +9,9 @@ import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { fetchPayments, createPaymentThunk, updatePaymentThunk, deletePaymentThunk } from '../store/paymentSlice';
 import { RootState } from '../store/store';
 import { Picker } from '@react-native-picker/picker';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native'; 
+import { NativeStackNavigationProp } from '@react-navigation/native-stack'; 
+import { RootStackParamList } from '../navigation/Navigation';
 
 interface Payment {
   id: number;
@@ -19,7 +22,8 @@ interface Payment {
   name: string;
   isDefault: boolean;
 }
-
+type PaymentScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Payments'>;
+type PaymentScreenRouteProp = RouteProp<RootStackParamList, 'Payments'>;
 type PaymentForm = Omit<Payment, 'id'>;
 
 const schema = yup.object({
@@ -32,6 +36,9 @@ const schema = yup.object({
 }).required();
 
 const PaymentScreen = () => {
+  const navigation = useNavigation<PaymentScreenNavigationProp>(); 
+  const route = useRoute<PaymentScreenRouteProp>(); 
+  const fromCheckout = route.params?.fromCheckout;
   const dispatch = useAppDispatch();
   const payments = useAppSelector((state: RootState) => state.payments.data) as Payment[];
 
@@ -54,12 +61,21 @@ const PaymentScreen = () => {
     dispatch(fetchPayments());
   }, [dispatch]);
 
-  const onSubmit: SubmitHandler<PaymentForm> = (data) => {
+  const onSubmit: SubmitHandler<PaymentForm> = async (data) => {
     if (editingId) {
-      dispatch(updatePaymentThunk({ id: editingId, payment: data }));
+      await dispatch(updatePaymentThunk({ id: editingId, payment: data }));
     } else {
-      dispatch(createPaymentThunk(data));
+      const resultAction = await dispatch(createPaymentThunk(data));
+      // Verifica se a ação foi bem-sucedida e se veio do checkout
+      if (createPaymentThunk.fulfilled.match(resultAction) && fromCheckout) {
+        const newPayment = resultAction.payload;
+        navigation.navigate('Checkout', { newPaymentId: newPayment.id });
+        setModalVisible(false);
+        reset();
+        return; // Para a execução
+      }
     }
+    // Comportamento padrão
     setModalVisible(false);
     reset();
   };
