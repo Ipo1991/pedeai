@@ -1,0 +1,27 @@
+Construção da aplicação web de back-end com persistência de dados para o
+aplicativo desenvolvido (5 CRUDs e página personalizada) utilizando as
+seguintes tecnologias:
+a. NestJS como framework de back-end
+b. TypeORM como ORM
+c. Banco de dados PostgreSQL
+d. Usar migrations do TypeORM para criação da estrutura de banco e
+alimentação dos dados iniciais.
+e. Collections do Postman com os CRUDs e exceções das regras de
+negócio
+Criação de ao menos 15 regras de negócio (3 cada CRUD) que retornem
+erros específicos.
+Criação de um README de como executar o projeto.
+Critérios:
+a. 5,0. Estrutura básica:
+i. Entidades, módulo, service, controllers
+ii. Regras de negócios
+iii. Migrations
+iv. Collection do Postman
+b. 2,5. Diferencial
+i. Exemplos: Autenticação, uso de bancos NoSQL, paginação,
+busca avançada, endpoint para o dashboard próprio, entre
+outros.
+c. 2,5. Integração com o aplicativo
+i. Funcionamento correto (operações de CRUD no banco)
+ii. Exibição dos erros retornados do back-end (regras de negócio)
+no aplicativo
