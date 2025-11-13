@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../services/ApiService';
+import SnackbarNotification from '../components/SnackbarNotification';
 
 interface Restaurant {
   id: number;
@@ -41,6 +42,7 @@ export default function AdminRestaurantsScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingRestaurant, setEditingRestaurant] = useState<Restaurant | null>(null);
   const [searchText, setSearchText] = useState('');
+  const [snackbar, setSnackbar] = useState({ visible: false, message: '', type: 'info' as 'success' | 'error' | 'warning' | 'info' });
   
   const [formData, setFormData] = useState({
     name: '',
@@ -88,17 +90,24 @@ export default function AdminRestaurantsScreen() {
 
       if (editingRestaurant) {
         await api.patch(`/restaurants/${editingRestaurant.id}`, payload);
-        Alert.alert('Sucesso', 'Restaurante atualizado com sucesso!');
+        setModalVisible(false);
+        resetForm();
+        loadRestaurants();
+        setTimeout(() => {
+          setSnackbar({ visible: true, message: 'Restaurante atualizado com sucesso!', type: 'success' });
+        }, 100);
       } else {
         await api.post('/restaurants', payload);
-        Alert.alert('Sucesso', 'Restaurante criado com sucesso!');
+        setModalVisible(false);
+        resetForm();
+        loadRestaurants();
+        setTimeout(() => {
+          setSnackbar({ visible: true, message: 'Restaurante criado com sucesso!', type: 'success' });
+        }, 100);
       }
-
-      setModalVisible(false);
-      resetForm();
-      loadRestaurants();
     } catch (error: any) {
-      Alert.alert('Erro', error.response?.data?.message || 'Erro ao salvar restaurante');
+      const errorMessage = error.response?.data?.message || 'Erro ao salvar restaurante';
+      setSnackbar({ visible: true, message: errorMessage, type: 'error' });
     }
   };
 
@@ -117,12 +126,13 @@ export default function AdminRestaurantsScreen() {
       console.log('🗑️ Enviando requisição DELETE para /restaurants/' + id);
       const response = await api.delete(`/restaurants/${id}`);
       console.log('✅ Restaurante deletado com sucesso:', response.data);
-      alert('Restaurante excluído com sucesso!');
       loadRestaurants();
+      setSnackbar({ visible: true, message: 'Restaurante excluído com sucesso!', type: 'success' });
     } catch (error: any) {
       console.error('❌ Erro ao deletar restaurante:', error);
       console.error('Response:', error.response?.data);
-      alert('Erro ao excluir: ' + (error.response?.data?.message || error.message));
+      const errorMessage = error.response?.data?.message || error.message || 'Erro ao excluir restaurante';
+      setSnackbar({ visible: true, message: errorMessage, type: 'error' });
     }
   };
 
@@ -266,6 +276,14 @@ export default function AdminRestaurantsScreen() {
           </View>
         </View>
       </Modal>
+
+      <SnackbarNotification
+        visible={snackbar.visible}
+        message={snackbar.message}
+        type={snackbar.type}
+        duration={4000}
+        onDismiss={() => setSnackbar({ visible: false, message: '', type: 'info' })}
+      />
     </View>
   );
 }

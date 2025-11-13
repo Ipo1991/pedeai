@@ -108,20 +108,31 @@ const CheckoutScreen: React.FC = () => {
     };
 
     console.log('Criando pedido:', orderData);
-    const result = await dispatch(createOrderThunk(orderData));
-    if (createOrderThunk.fulfilled.match(result)) {
-      await dispatch(clearCartThunk());
-      setSnackbar({ 
-        visible: true, 
-        message: `✅ Pedido Confirmado! Total: R$ ${total.toFixed(2)}`, 
-        type: 'success' 
-      });
-      console.log(`✅ Pedido Confirmado! Total: R$ ${total.toFixed(2)}`);
-      // Navega após 1.5s para usuário ver o snackbar
-      setTimeout(() => navigation.navigate('OrderHistory'), 1500);
-    } else {
-      setSnackbar({ visible: true, message: 'Erro ao finalizar pedido', type: 'error' });
-      console.error('❌ Erro ao finalizar pedido');
+    try {
+      const result = await dispatch(createOrderThunk(orderData));
+      if (createOrderThunk.fulfilled.match(result)) {
+        await dispatch(clearCartThunk());
+        setSnackbar({ 
+          visible: true, 
+          message: `✅ Pedido Confirmado! Total: R$ ${total.toFixed(2)}`, 
+          type: 'success' 
+        });
+        console.log(`✅ Pedido Confirmado! Total: R$ ${total.toFixed(2)}`);
+        // Navega após 1.5s para usuário ver o snackbar
+        setTimeout(() => navigation.navigate('OrderHistory'), 1500);
+      } else {
+        // Extrai a mensagem de erro do backend
+        // rejectWithValue retorna a mensagem diretamente como string no payload
+        const errorMessage = typeof result.payload === 'string' 
+          ? result.payload 
+          : (result.payload as any)?.message || 'Erro ao finalizar pedido';
+        setSnackbar({ visible: true, message: errorMessage, type: 'error' });
+        console.error('❌ Erro ao finalizar pedido:', errorMessage);
+      }
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || error?.message || 'Erro ao finalizar pedido';
+      setSnackbar({ visible: true, message: errorMessage, type: 'error' });
+      console.error('❌ Erro ao finalizar pedido:', error);
     }
   };
 

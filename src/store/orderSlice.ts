@@ -5,8 +5,14 @@ export const fetchOrders = createAsyncThunk('orders/fetch', async () => {
   return await getOrders();
 });
 
-export const createOrderThunk = createAsyncThunk('orders/create', async (order: any) => {
-  return await createOrder(order);
+export const createOrderThunk = createAsyncThunk('orders/create', async (order: any, { rejectWithValue }) => {
+  try {
+    return await createOrder(order);
+  } catch (error: any) {
+    const message = error?.response?.data?.message || error?.message || 'Erro ao criar pedido';
+    console.error('❌ createOrderThunk: Error', message);
+    return rejectWithValue(message);
+  }
 });
 
 export const updateOrderThunk = createAsyncThunk('orders/update', async ({ id, order }: { id: number; order: any }) => {

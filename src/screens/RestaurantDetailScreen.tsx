@@ -212,9 +212,13 @@ const RestaurantDetailScreen: React.FC = () => {
         <Card style={styles.headerCard}>
           <Card.Content>
             <View style={styles.headerContent}>
-              <Text style={styles.restaurantImage}>
-                {categoryEmojis[restaurant.category] || '🍽️'}
-              </Text>
+              {restaurant.image ? (
+                <Image source={{ uri: restaurant.image }} style={styles.restaurantImagePhoto} />
+              ) : (
+                <Text style={styles.restaurantImageEmoji}>
+                  {categoryEmojis[restaurant.category] || '🍽️'}
+                </Text>
+              )}
               <View style={styles.headerInfo}>
                 <Text style={styles.restaurantName}>{restaurant.name}</Text>
                 <Text style={styles.category}>{restaurant.category}</Text>
@@ -333,6 +337,16 @@ const styles = StyleSheet.create({
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  restaurantImagePhoto: {
+    width: 80,
+    height: 80,
+    borderRadius: 12,
+    marginRight: 16,
+  },
+  restaurantImageEmoji: {
+    fontSize: 56,
+    marginRight: 16,
   },
   restaurantImage: {
     fontSize: 56,

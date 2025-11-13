@@ -70,8 +70,6 @@ export const createAddress = async (address: any) => {
   const payload = {
     street: address.street,
     number: address.number,
-    complement: address.complement || undefined,
-    neighborhood: address.neighborhood, // Campo obrigatório no backend
     city: address.city,
     state: address.state,
     zip: String(address.zip).replace(/\D/g, ''), // remove hífen
@@ -85,8 +83,6 @@ export const updateAddress = async (id: number, address: any) => {
   const payload = {
     street: address.street,
     number: address.number,
-    complement: address.complement || undefined,
-    neighborhood: address.neighborhood,
     city: address.city,
     state: address.state,
     zip: String(address.zip).replace(/\D/g, ''),

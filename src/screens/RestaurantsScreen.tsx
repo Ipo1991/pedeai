@@ -108,9 +108,6 @@ const RestaurantsScreen: React.FC = () => {
                 <View style={styles.restaurantInfo}>
                   <Text style={styles.restaurantName}>{restaurant.name}</Text>
                   <Text style={styles.category}>{restaurant.category}</Text>
-                  <View style={styles.detailsRow}>
-                    <Text style={styles.detail}>🕐 {restaurant.deliveryTime}</Text>
-                  </View>
                 </View>
               </View>
             </Card.Content>

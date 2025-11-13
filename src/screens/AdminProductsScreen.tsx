@@ -14,6 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import api from '../services/ApiService';
+import SnackbarNotification from '../components/SnackbarNotification';
 
 interface Product {
   id: number;
@@ -55,6 +56,7 @@ export default function AdminProductsScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [searchText, setSearchText] = useState('');
+  const [snackbar, setSnackbar] = useState({ visible: false, message: '', type: 'info' as 'success' | 'error' | 'warning' | 'info' });
   
   const [formData, setFormData] = useState({
     name: '',
@@ -102,7 +104,7 @@ export default function AdminProductsScreen() {
   const handleSave = async () => {
     try {
       if (!formData.name || !formData.restaurant_id) {
-        Alert.alert('Erro', 'Preencha todos os campos obrigatórios');
+        setSnackbar({ visible: true, message: 'Preencha todos os campos obrigatórios', type: 'warning' });
         return;
       }
 
@@ -117,17 +119,24 @@ export default function AdminProductsScreen() {
 
       if (editingProduct) {
         await api.patch(`/products/${editingProduct.id}`, payload);
-        Alert.alert('Sucesso', 'Produto atualizado com sucesso!');
+        setModalVisible(false);
+        resetForm();
+        loadData();
+        setTimeout(() => {
+          setSnackbar({ visible: true, message: 'Produto atualizado com sucesso!', type: 'success' });
+        }, 100);
       } else {
         await api.post('/products', payload);
-        Alert.alert('Sucesso', 'Produto criado com sucesso!');
+        setModalVisible(false);
+        resetForm();
+        loadData();
+        setTimeout(() => {
+          setSnackbar({ visible: true, message: 'Produto criado com sucesso!', type: 'success' });
+        }, 100);
       }
-
-      setModalVisible(false);
-      resetForm();
-      loadData();
     } catch (error: any) {
-      Alert.alert('Erro', error.response?.data?.message || 'Erro ao salvar produto');
+      const errorMessage = error.response?.data?.message || 'Erro ao salvar produto';
+      setSnackbar({ visible: true, message: errorMessage, type: 'error' });
     }
   };
 
@@ -145,12 +154,13 @@ export default function AdminProductsScreen() {
       console.log('🗑️ Enviando requisição DELETE para /products/' + id);
       const response = await api.delete(`/products/${id}`);
       console.log('✅ Produto deletado com sucesso:', response.data);
-      alert('Produto excluído com sucesso!');
       loadData();
+      setSnackbar({ visible: true, message: 'Produto excluído com sucesso!', type: 'success' });
     } catch (error: any) {
       console.error('❌ Erro ao deletar produto:', error);
       console.error('Response:', error.response?.data);
-      alert('Erro ao excluir: ' + (error.response?.data?.message || error.message));
+      const errorMessage = error.response?.data?.message || error.message || 'Erro ao excluir produto';
+      setSnackbar({ visible: true, message: errorMessage, type: 'error' });
     }
   };
 
@@ -326,6 +336,14 @@ export default function AdminProductsScreen() {
           </View>
         </View>
       </Modal>
+
+      <SnackbarNotification
+        visible={snackbar.visible}
+        message={snackbar.message}
+        type={snackbar.type}
+        duration={4000}
+        onDismiss={() => setSnackbar({ visible: false, message: '', type: 'info' })}
+      />
     </View>
   );
 }
