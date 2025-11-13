@@ -27,9 +27,7 @@ interface Restaurant {
   id: number;
   name: string;
   category: string;
-  rating: number;
   delivery_time: string;
-  delivery_fee: number;
   image?: string;
   is_active: boolean;
 }
@@ -221,9 +219,7 @@ const RestaurantDetailScreen: React.FC = () => {
                 <Text style={styles.restaurantName}>{restaurant.name}</Text>
                 <Text style={styles.category}>{restaurant.category}</Text>
                 <View style={styles.detailsRow}>
-                  <Text style={styles.detail}>⭐ {restaurant.rating}</Text>
                   <Text style={styles.detail}>🕐 {restaurant.delivery_time}</Text>
-                  <Text style={styles.detail}>🚚 R$ {Number(restaurant.delivery_fee).toFixed(2)}</Text>
                 </View>
               </View>
             </View>

@@ -12,6 +12,9 @@ import CartScreen from '../screens/CartScreen';
 import CheckoutScreen from '../screens/CheckoutScreen';
 import RestaurantsScreen from '../screens/RestaurantsScreen';
 import RestaurantDetailScreen from '../screens/RestaurantDetailScreen';
+import StatisticsScreen from '../screens/StatisticsScreen';
+import AdminRestaurantsScreen from '../screens/AdminRestaurantsScreen';
+import AdminProductsScreen from '../screens/AdminProductsScreen';
 import { AuthContext } from '../contexts/AuthContext';
 import { View, Text, ActivityIndicator } from 'react-native';
 
@@ -27,6 +30,9 @@ export type RootStackParamList = {
   Checkout: undefined;
   Restaurants: undefined;
   RestaurantDetail: { id: number };
+  Statistics: undefined;
+  AdminRestaurants: undefined;
+  AdminProducts: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -71,6 +77,9 @@ const Navigation = () => {
             <Stack.Screen name="Addresses" component={AddressScreen} options={{ title: 'Endereços' }} />
             <Stack.Screen name="Payments" component={PaymentScreen} options={{ title: 'Pagamentos' }} />
             <Stack.Screen name="OrderHistory" component={OrderHistoryScreen} options={{ title: 'Histórico' }} />
+            <Stack.Screen name="Statistics" component={StatisticsScreen} options={{ title: 'Estatísticas' }} />
+            <Stack.Screen name="AdminRestaurants" component={AdminRestaurantsScreen} options={{ title: 'Admin - Restaurantes' }} />
+            <Stack.Screen name="AdminProducts" component={AdminProductsScreen} options={{ title: 'Admin - Produtos' }} />
           </>
         )}
       </Stack.Navigator>

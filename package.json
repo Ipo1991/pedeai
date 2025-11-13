@@ -33,6 +33,7 @@
     "react-native-vector-icons": "^10.3.0",
     "react-native-web": "^0.21.1",
     "react-redux": "^9.2.0",
+    "recharts": "^3.4.1",
     "victory": "^37.3.6",
     "victory-native": "^41.20.1",
     "yup": "^1.7.1"

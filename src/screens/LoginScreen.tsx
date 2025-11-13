@@ -40,7 +40,20 @@ const LoginScreen: React.FC = () => {
       await auth.signIn(data.email, data.password);
       // Navegação automática quando o token for definido
     } catch (err: any) {
-      setError(err.message || 'Credenciais inválidas');
+      console.log('Login error:', err);
+      
+      // Verifica o status code do erro
+      if (err.response?.status === 401) {
+        setError('Email ou senha incorretos. Verifique seus dados e tente novamente.');
+      } else if (err.response?.status === 400) {
+        setError('Dados inválidos. Verifique o email e senha digitados.');
+      } else if (err.response?.status >= 500) {
+        setError('Erro no servidor. Tente novamente em alguns instantes.');
+      } else if (err.message?.includes('Network')) {
+        setError('Sem conexão com o servidor. Verifique sua internet.');
+      } else {
+        setError('Erro ao fazer login. Verifique seus dados e tente novamente.');
+      }
     } finally {
       setLoading(false);
     }
@@ -68,85 +81,91 @@ const LoginScreen: React.FC = () => {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.logo}>PedeAí</Text>
-      <Text style={styles.subtitle}>Bem-vindo de volta! Faça login para continuar.</Text>
+      <View style={styles.header}>
+        <Text style={styles.logo}>PedeAí</Text>
+        <Text style={styles.subtitle}>Bem-vindo de volta! Faça login para continuar.</Text>
+      </View>
 
-      {/* Email */}
-      <Card style={styles.card}>
-        <Card.Content>
-          <Controller
-            control={control}
-            name="email"
-            render={({ field: { value } }) => (
-              <PaperInput
-                label="Email"
-                value={value}
-                onChangeText={handleChangeEmail}
-                error={!!errors.email}
-                left={<PaperInput.Icon icon="email" color="#b71c1c" />}
-                activeUnderlineColor="#b71c1c"
-                style={styles.input}
-                textColor="#000"
-              />
-            )}
-          />
-          {errors.email && <Text style={styles.error}>{errors.email.message}</Text>}
-        </Card.Content>
-      </Card>
-
-      {/* Senha */}
-      <Card style={styles.card}>
-        <Card.Content>
-          <Controller
-            control={control}
-            name="password"
-            render={({ field: { value } }) => (
-              <PaperInput
-                label="Senha"
-                value={value}
-                onChangeText={handleChangePassword}
-                secureTextEntry
-                error={!!errors.password}
-                left={<PaperInput.Icon icon="lock" color="#b71c1c" />}
-                activeUnderlineColor="#b71c1c"
-                style={styles.input}
-                textColor="#000"
-              />
-            )}
-          />
-          {errors.password && <Text style={styles.error}>{errors.password.message}</Text>}
-        </Card.Content>
-      </Card>
-
-      {/* Botão Entrar */}
-      <Button
-        mode="contained"
-        onPress={handleSubmit(onSubmit)}
-        disabled={loading}
-        style={styles.loginButton}
-        buttonColor="#b71c1c"
-        textColor="white"
-      >
-        {loading ? <ActivityIndicator color="white" /> : 'Entrar'}
-      </Button>
-
-      {/* Erro de login */}
-      {error && (
-        <Card style={styles.errorCard}>
+      <View style={styles.formContainer}>
+        {/* Email */}
+        <Card style={styles.card}>
           <Card.Content>
-            <Text style={styles.errorText}>⚠️ {error}</Text>
+            <Controller
+              control={control}
+              name="email"
+              render={({ field: { value } }) => (
+                <PaperInput
+                  label="Email"
+                  value={value}
+                  onChangeText={handleChangeEmail}
+                  error={!!errors.email}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  left={<PaperInput.Icon icon="email" color="#b71c1c" />}
+                  activeUnderlineColor="#b71c1c"
+                  style={styles.input}
+                  textColor="#000"
+                />
+              )}
+            />
+            {errors.email && <Text style={styles.error}>{errors.email.message}</Text>}
           </Card.Content>
         </Card>
-      )}
 
-      {/* Links */}
-      <View style={styles.linksContainer}>
-        <Button textColor="#b71c1c" onPress={() => navigation.navigate('Register')}>
-          Cadastrar
+        {/* Senha */}
+        <Card style={styles.card}>
+          <Card.Content>
+            <Controller
+              control={control}
+              name="password"
+              render={({ field: { value } }) => (
+                <PaperInput
+                  label="Senha"
+                  value={value}
+                  onChangeText={handleChangePassword}
+                  secureTextEntry
+                  error={!!errors.password}
+                  left={<PaperInput.Icon icon="lock" color="#b71c1c" />}
+                  activeUnderlineColor="#b71c1c"
+                  style={styles.input}
+                  textColor="#000"
+                />
+              )}
+            />
+            {errors.password && <Text style={styles.error}>{errors.password.message}</Text>}
+          </Card.Content>
+        </Card>
+
+        {/* Erro de login */}
+        {error && (
+          <Card style={styles.errorCard}>
+            <Card.Content>
+              <Text style={styles.errorText}>⚠️ {error}</Text>
+            </Card.Content>
+          </Card>
+        )}
+
+        {/* Botão Entrar */}
+        <Button
+          mode="contained"
+          onPress={handleSubmit(onSubmit)}
+          disabled={loading}
+          style={styles.loginButton}
+          buttonColor="#b71c1c"
+          textColor="white"
+        >
+          {loading ? <ActivityIndicator color="white" /> : 'Entrar'}
         </Button>
-        <Button textColor="#b71c1c" onPress={() => setForgotVisible(true)}>
-          Esqueci a senha
-        </Button>
+
+        {/* Links */}
+        <View style={styles.linksContainer}>
+          <Button textColor="#b71c1c" onPress={() => navigation.navigate('Register')}>
+            Não tem conta? Cadastre-se
+          </Button>
+          <Button textColor="#b71c1c" onPress={() => setForgotVisible(true)}>
+            Esqueci a senha
+          </Button>
+        </View>
       </View>
 
       {/* Modal Esqueci a Senha */}
@@ -156,17 +175,24 @@ const LoginScreen: React.FC = () => {
           onDismiss={() => setForgotVisible(false)}
           contentContainerStyle={styles.modalContent}
         >
-          <Text style={styles.modalTitle}>Recuperar Senha</Text>
-          <Card style={styles.modalCard}>
-            <Card.Content>
-              {emailSent ? (
+          <View style={{ padding: 20 }}>
+            <Text style={styles.modalTitle}>Recuperar Senha</Text>
+            {emailSent ? (
+              <View style={{ paddingVertical: 20 }}>
                 <Text style={styles.successText}>📧 Email de recuperação enviado com sucesso!</Text>
-              ) : (
-                <>
+                <Text style={{ textAlign: 'center', color: '#666', marginTop: 8 }}>
+                  Verifique sua caixa de entrada.
+                </Text>
+              </View>
+            ) : (
+              <Card style={styles.modalCard}>
+                <Card.Content>
                   <PaperInput
                     label="Email"
                     value={forgotEmail}
                     onChangeText={setForgotEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
                     left={<PaperInput.Icon icon="email" color="#b71c1c" />}
                     activeUnderlineColor="#b71c1c"
                     style={styles.input}
@@ -176,8 +202,9 @@ const LoginScreen: React.FC = () => {
                     mode="contained"
                     onPress={handleForgotPassword}
                     style={styles.saveButton}
-                    buttonColor={forgotEmail ? '#b71c1c' : '#f28b82'}
+                    buttonColor={forgotEmail ? '#b71c1c' : '#ccc'}
                     textColor="white"
+                    disabled={!forgotEmail}
                   >
                     Enviar Email
                   </Button>
@@ -189,10 +216,10 @@ const LoginScreen: React.FC = () => {
                   >
                     Cancelar
                   </Button>
-                </>
-              )}
-            </Card.Content>
-          </Card>
+                </Card.Content>
+              </Card>
+            )}
+          </View>
         </Modal>
       </Portal>
     </ScrollView>
@@ -202,63 +229,104 @@ const LoginScreen: React.FC = () => {
 export default LoginScreen;
 
 const styles = StyleSheet.create({
-  container: { padding: 20, paddingTop: 60, paddingBottom: 40 },
-  logo: { fontSize: 36, fontWeight: '700', textAlign: 'center', color: '#b71c1c' },
-  subtitle: { fontSize: 16, textAlign: 'center', marginBottom: 30, color: '#444' },
+  container: {
+    flexGrow: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  header: {
+    backgroundColor: '#b71c1c',
+    padding: 30,
+    paddingTop: 60,
+    paddingBottom: 40,
+    borderBottomLeftRadius: 25,
+    borderBottomRightRadius: 25,
+    marginBottom: 20,
+  },
+  logo: {
+    fontSize: 40,
+    fontWeight: '700',
+    textAlign: 'center',
+    color: '#fff',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    textAlign: 'center',
+    color: '#ffcdd2',
+  },
+  formContainer: {
+    padding: 20,
+  },
   card: {
     marginBottom: 12,
     borderRadius: 12,
-    backgroundColor: '#ffe5e5',
+    backgroundColor: '#fff',
+    elevation: 2,
   },
   input: {
     marginVertical: 4,
     backgroundColor: '#fff',
   },
-  error: { color: 'red', marginTop: 4, textAlign: 'center' },
+  error: {
+    color: '#d32f2f',
+    fontSize: 12,
+    marginTop: 4,
+    marginLeft: 4,
+  },
   errorCard: {
-    marginTop: 15,
+    marginTop: 4,
+    marginBottom: 12,
     backgroundColor: '#ffebee',
-    borderRadius: 8,
+    borderRadius: 12,
     borderLeftWidth: 4,
     borderLeftColor: '#d32f2f',
+    elevation: 2,
   },
   errorText: {
     color: '#c62828',
     fontSize: 14,
     fontWeight: '600',
-    textAlign: 'center',
   },
-  loginButton: { marginTop: 20, borderRadius: 8 },
+  loginButton: {
+    marginTop: 24,
+    marginBottom: 16,
+    borderRadius: 10,
+    paddingVertical: 6,
+    elevation: 3,
+  },
   linksContainer: {
     marginTop: 10,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    marginBottom: 30,
+    alignItems: 'center',
   },
   modalContent: {
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 20,
+    borderRadius: 16,
     margin: 20,
-  },
-  modalCard: {
-    backgroundColor: '#ffe5e5',
-    borderRadius: 12,
+    overflow: 'hidden',
   },
   modalTitle: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '700',
-    marginBottom: 12,
+    marginBottom: 16,
     textAlign: 'center',
     color: '#b71c1c',
   },
+  modalCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    elevation: 0,
+  },
   successText: {
     fontSize: 16,
-    color: 'green',
+    color: '#2e7d32',
     textAlign: 'center',
     fontWeight: '500',
+    paddingVertical: 12,
   },
   saveButton: {
     marginTop: 16,
-    borderRadius: 8,
+    borderRadius: 10,
+    paddingVertical: 4,
   },
 });

@@ -13,9 +13,7 @@ interface Restaurant {
   id: number;
   name: string;
   category: string;
-  rating: number;
   deliveryTime: string;
-  deliveryFee: number;
   image?: string;
   isActive: boolean;
 }
@@ -107,11 +105,7 @@ const RestaurantsScreen: React.FC = () => {
                   <Text style={styles.restaurantName}>{restaurant.name}</Text>
                   <Text style={styles.category}>{restaurant.category}</Text>
                   <View style={styles.detailsRow}>
-                    <Text style={styles.detail}>⭐ {restaurant.rating}</Text>
                     <Text style={styles.detail}>🕐 {restaurant.deliveryTime}</Text>
-                    <Text style={styles.detail}>
-                      🚚 R$ {Number(restaurant.deliveryFee).toFixed(2)}
-                    </Text>
                   </View>
                 </View>
               </View>

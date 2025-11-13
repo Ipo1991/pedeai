@@ -1,9 +1,9 @@
-import React, { useContext } from 'react';
+﻿import React, { useContext } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { Button, Card } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { AuthContext } from '../contexts/AuthContext';
-import { Button, Card } from 'react-native-paper';
-import { useAppDispatch } from '../store/hooks';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { clearOrders } from '../store/orderSlice';
 import { clearAddresses } from '../store/addressSlice';
 import { clearPayments } from '../store/paymentSlice';
@@ -12,56 +12,109 @@ const DashboardScreen = () => {
   const auth = useContext(AuthContext)!;
   const navigation = useNavigation<any>();
   const dispatch = useAppDispatch();
+  const isAdmin = useAppSelector((state) => state.auth.isAdmin);
+
+  console.log('👤 DashboardScreen - isAdmin:', isAdmin);
+  console.log('👤 DashboardScreen - auth state:', useAppSelector((state) => state.auth));
 
   const handleLogout = () => {
-    dispatch(clearOrders()); // Limpa pedidos do Redux
-    dispatch(clearAddresses()); // Limpa endereços do Redux
-    dispatch(clearPayments()); // Limpa pagamentos do Redux
+    dispatch(clearOrders());
+    dispatch(clearAddresses());
+    dispatch(clearPayments());
     auth.signOut();
   };
 
-  const menuItems = [
-    { title: 'Restaurantes', icon: '🍽️', screen: 'Restaurants', description: 'Explore restaurantes' },
-    { title: 'Pedidos', icon: '📦', screen: 'OrderHistory', description: 'Histórico de pedidos' },
-    { title: 'Perfil', icon: '👤', screen: 'Profile', description: 'Meus dados' },
-    { title: 'Endereços', icon: '📍', screen: 'Addresses', description: 'Gerenciar endereços' },
-    { title: 'Pagamentos', icon: '💳', screen: 'Payments', description: 'Formas de pagamento' },
-  ];
-
   return (
     <ScrollView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.logo}>PedeAí</Text>
+        <Text style={styles.logo}>🍔 PedeAí</Text>
         <Text style={styles.welcome}>Olá, {auth.user?.name || 'Usuário'}!</Text>
-        <Text style={styles.subtitle}>O que você deseja hoje?</Text>
+        <Text style={styles.subtitle}>O que você deseja fazer hoje?</Text>
       </View>
 
-      {/* Menu Cards */}
       <View style={styles.menuGrid}>
-        {menuItems.map((item, index) => (
-          <Card key={index} style={styles.card} onPress={() => navigation.navigate(item.screen)}>
-            <Card.Content style={styles.cardContent}>
-              <Text style={styles.icon}>{item.icon}</Text>
-              <Text style={styles.cardTitle}>{item.title}</Text>
-              <Text style={styles.cardDescription}>{item.description}</Text>
-            </Card.Content>
-          </Card>
-        ))}
-      </View>
+        <TouchableOpacity
+          style={styles.menuCard}
+          onPress={() => navigation.navigate('Restaurants')}
+        >
+          <Text style={styles.menuIcon}>🍽️</Text>
+          <Text style={styles.menuText}>Restaurantes</Text>
+          <Text style={styles.menuDescription}>Explore opções</Text>
+        </TouchableOpacity>
 
-      {/* Logout Button */}
-      <View style={styles.logoutSection}>
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <View style={styles.logoutContent}>
-            <Text style={styles.logoutIcon}>🚪</Text>
-            <Text style={styles.logoutText}>Sair da Conta</Text>
-          </View>
-          <Text style={styles.logoutArrow}>›</Text>
+        <TouchableOpacity
+          style={styles.menuCard}
+          onPress={() => navigation.navigate('OrderHistory')}
+        >
+          <Text style={styles.menuIcon}>📦</Text>
+          <Text style={styles.menuText}>Meus Pedidos</Text>
+          <Text style={styles.menuDescription}>Histórico</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.menuCard}
+          onPress={() => navigation.navigate('Profile')}
+        >
+          <Text style={styles.menuIcon}>👤</Text>
+          <Text style={styles.menuText}>Perfil</Text>
+          <Text style={styles.menuDescription}>Meus dados</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.menuCard}
+          onPress={() => navigation.navigate('Addresses')}
+        >
+          <Text style={styles.menuIcon}>📍</Text>
+          <Text style={styles.menuText}>Endereços</Text>
+          <Text style={styles.menuDescription}>Gerenciar</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.menuCard}
+          onPress={() => navigation.navigate('Payments')}
+        >
+          <Text style={styles.menuIcon}>💳</Text>
+          <Text style={styles.menuText}>Pagamento</Text>
+          <Text style={styles.menuDescription}>Formas</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.menuCard}
+          onPress={() => navigation.navigate('Statistics')}
+        >
+          <Text style={styles.menuIcon}>📊</Text>
+          <Text style={styles.menuText}>Estatísticas</Text>
+          <Text style={styles.menuDescription}>Dados</Text>
+        </TouchableOpacity>
+
+        {isAdmin && (
+          <>
+            <TouchableOpacity
+              style={[styles.menuCard, styles.adminCard]}
+              onPress={() => navigation.navigate('AdminRestaurants')}
+            >
+              <Text style={styles.menuIcon}>🏪</Text>
+              <Text style={[styles.menuText, styles.adminText]}>Admin - Restaurantes</Text>
+              <Text style={styles.menuDescription}>Gerenciar</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.menuCard, styles.adminCard]}
+              onPress={() => navigation.navigate('AdminProducts')}
+            >
+              <Text style={styles.menuIcon}>🍕</Text>
+              <Text style={[styles.menuText, styles.adminText]}>Admin - Produtos</Text>
+              <Text style={styles.menuDescription}>Gerenciar</Text>
+            </TouchableOpacity>
+          </>
+        )}
+
+        <TouchableOpacity style={styles.menuCard} onPress={handleLogout}>
+          <Text style={styles.menuIcon}>🚪</Text>
+          <Text style={styles.menuText}>Sair</Text>
+          <Text style={styles.menuDescription}>Logout</Text>
         </TouchableOpacity>
       </View>
-
-      <View style={styles.spacer} />
     </ScrollView>
   );
 };
@@ -73,95 +126,73 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#b71c1c',
-    padding: 30,
-    paddingTop: 60,
+    padding: 24,
+    paddingTop: 48,
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
   },
   logo: {
     fontSize: 32,
-    fontWeight: '700',
+    fontWeight: 'bold',
     color: '#fff',
     textAlign: 'center',
-    marginBottom: 10,
+    marginBottom: 12,
   },
   welcome: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '600',
     color: '#fff',
     textAlign: 'center',
-    marginBottom: 5,
+    marginBottom: 8,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#ffcdd2',
+    fontSize: 14,
+    color: '#ffcccc',
     textAlign: 'center',
   },
   menuGrid: {
-    padding: 15,
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    padding: 16,
+    gap: 12,
   },
-  card: {
-    width: '48%',
-    marginBottom: 15,
+  menuCard: {
+    flex: 1,
+    minWidth: '45%',
     backgroundColor: '#fff',
     borderRadius: 12,
-    elevation: 2,
-  },
-  cardContent: {
+    padding: 20,
     alignItems: 'center',
-    padding: 15,
+    justifyContent: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  icon: {
-    fontSize: 40,
-    marginBottom: 10,
+  menuIcon: {
+    fontSize: 48,
+    marginBottom: 8,
   },
-  cardTitle: {
+  menuText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
-    marginBottom: 5,
+    color: '#b71c1c',
+    textAlign: 'center',
+    marginBottom: 4,
   },
-  cardDescription: {
+  menuDescription: {
     fontSize: 12,
     color: '#666',
     textAlign: 'center',
   },
-  logoutSection: {
-    padding: 20,
+  adminCard: {
+    borderWidth: 2,
+    borderColor: '#ff9800',
+    backgroundColor: '#fff8e1',
   },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ffcdd2',
-  },
-  logoutContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  logoutIcon: {
-    fontSize: 24,
-    marginRight: 12,
-  },
-  logoutText: {
-    fontSize: 16,
-    color: '#b71c1c',
-    fontWeight: '600',
-  },
-  logoutArrow: {
-    fontSize: 24,
-    color: '#b71c1c',
-    fontWeight: 'bold',
-  },
-  spacer: {
-    height: 20,
+  adminText: {
+    color: '#ff6f00',
   },
 });
 

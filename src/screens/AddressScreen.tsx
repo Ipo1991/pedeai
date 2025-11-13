@@ -143,41 +143,15 @@ const AddressScreen = () => {
     try {
       if (editingId) {
         console.log('🏠 AddressScreen: Updating address', editingId);
-        const result = await dispatch(updateAddressThunk({ id: editingId, address: data }));
-        // Garante unicidade do endereço padrão
-        if ((data as any).isDefault) {
-          const newId = editingId;
-          const toUpdate = (addresses || []).filter(a => a.id !== newId && a.isDefault);
-          for (const addr of toUpdate) {
-            await dispatch(updateAddressThunk({ id: addr.id, address: { ...addr, isDefault: false } }));
-          }
-        }
-        // Refresca lista para garantir sincronismo com storage
-        console.log('🏠 AddressScreen: Fetching addresses after update');
-        await dispatch(fetchAddresses());
+        await dispatch(updateAddressThunk({ id: editingId, address: data }));
       } else {
         console.log('🏠 AddressScreen: Creating new address');
-        const resultAction = await dispatch(createAddressThunk(data));
-        console.log('🏠 AddressScreen: Create result', resultAction);
-        // Verifica se a ação foi bem-sucedida e se veio do checkout
-        if (createAddressThunk.fulfilled.match(resultAction)) {
-          const newAddress = resultAction.payload as Address;
-          console.log('🏠 AddressScreen: Address created successfully', newAddress);
-          // Garante unicidade do endereço padrão
-          if ((data as any).isDefault) {
-            const toUpdate = (addresses || []).filter(a => a.id !== newAddress.id && a.isDefault);
-            for (const addr of toUpdate) {
-              await dispatch(updateAddressThunk({ id: addr.id, address: { ...addr, isDefault: false } }));
-            }
-          }
-          // Refresca lista após criação
-          console.log('🏠 AddressScreen: Fetching addresses after create');
-          await dispatch(fetchAddresses());
-        } else {
-          console.error('🏠 AddressScreen: Create failed', resultAction);
-        }
+        await dispatch(createAddressThunk(data));
       }
-      // Comportamento padrão
+      
+      // Backend cuida da lógica de endereço padrão, apenas recarrega a lista
+      await dispatch(fetchAddresses());
+      
       setModalVisible(false);
       reset();
       setNoNumber(false);
@@ -187,7 +161,13 @@ const AddressScreen = () => {
   };
 
   const editAddress = (address: Address) => {
-    reset(address);
+    // Formata o CEP e garante que não há valores null
+    const formattedAddress = {
+      ...address,
+      zip: formatCEP(address.zip), // Aplica máscara no CEP
+      complement: address.complement || '', // Garante string vazia em vez de null
+    };
+    reset(formattedAddress);
     setNoNumber(String(address.number).toUpperCase() === 'S/N');
     setEditingId(address.id);
     setModalVisible(true);
@@ -207,6 +187,15 @@ const AddressScreen = () => {
         renderItem={({ item }) => (
           <Card style={styles.card}>
             <Card.Content>
+              <View style={styles.cardHeader}>
+                <Text style={styles.cardTypeLabel}>📍 Endereço</Text>
+                {item.isDefault && (
+                  <View style={styles.defaultBadge}>
+                    <Text style={styles.defaultBadgeText}>Padrão</Text>
+                  </View>
+                )}
+              </View>
+
               <Text style={styles.label}>Rua:</Text>
               <Text style={styles.value}>{item.street}, {item.number}</Text>
 
@@ -215,10 +204,6 @@ const AddressScreen = () => {
 
               <Text style={styles.label}>CEP:</Text>
               <Text style={styles.value}>{item.zip}</Text>
-
-              {item.isDefault && (
-                <Text style={[styles.value, { color: '#b71c1c', fontWeight: '600' }]}>Endereço Padrão</Text>
-              )}
 
               <View style={styles.cardButtons}>
                 <Button
@@ -476,15 +461,19 @@ export default AddressScreen;
 const styles = StyleSheet.create({
   container: { padding: 20, paddingBottom: 40 },
   title: { fontSize: 28, fontWeight: '700', marginBottom: 20, textAlign: 'center', color: '#b71c1c' },
-  card: { marginBottom: 12, borderRadius: 12, backgroundColor: '#ffe5e5' },
-  label: { fontWeight: '500', color: '#333', marginTop: 6 },
+  card: { marginBottom: 12, borderRadius: 12, backgroundColor: '#fff', elevation: 2 },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  cardTypeLabel: { fontSize: 18, fontWeight: '700', color: '#b71c1c' },
+  defaultBadge: { backgroundColor: '#b71c1c', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
+  defaultBadgeText: { color: '#fff', fontSize: 12, fontWeight: '600' },
+  label: { fontWeight: '500', color: '#666', marginTop: 6, fontSize: 13 },
   value: { fontSize: 16, color: '#333', marginBottom: 4 },
-  cardButtons: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
+  cardButtons: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 },
   cardButton: { flex: 1, marginHorizontal: 4, borderRadius: 8 },
   addButton: { marginTop: 16, borderRadius: 8 },
   input: { marginVertical: 8, backgroundColor: '#fff' },
   textInput: { color: '#000' },
-  error: { color: 'red', marginBottom: 4 },
+  error: { color: '#d32f2f', fontSize: 12, marginTop: -4, marginBottom: 8 },
   // New modal styles (consistent with ProfileScreen)
   modalContainer: {
     backgroundColor: '#fff',

@@ -116,27 +116,14 @@ const PaymentScreen = () => {
     console.log('💳 PaymentScreen: Submitting', data);
     try {
       if (editingId) {
-        await dispatch(updatePaymentThunk({ id: editingId, payment: data }));
-        if (data.isDefault) {
-          const toUpdate = payments.filter(p => p.id !== editingId && p.isDefault);
-          for (const pay of toUpdate) {
-            await dispatch(updatePaymentThunk({ id: pay.id, payment: { ...pay, isDefault: false } }));
-          }
-        }
-        await dispatch(fetchPayments());
+        await dispatch(updatePaymentThunk({ id: editingId, payment: data })).unwrap();
       } else {
-        const resultAction = await dispatch(createPaymentThunk(data));
-        if (createPaymentThunk.fulfilled.match(resultAction)) {
-          const newPayment = resultAction.payload as Payment;
-          if (data.isDefault) {
-            const toUpdate = payments.filter(p => p.id !== newPayment.id && p.isDefault);
-            for (const pay of toUpdate) {
-              await dispatch(updatePaymentThunk({ id: pay.id, payment: { ...pay, isDefault: false } }));
-            }
-          }
-          await dispatch(fetchPayments());
-        }
+        await dispatch(createPaymentThunk(data)).unwrap();
       }
+      
+      // Recarrega a lista
+      await dispatch(fetchPayments());
+      
       setModalVisible(false);
       reset();
       setPaymentType('credit');
@@ -146,7 +133,15 @@ const PaymentScreen = () => {
   };
 
   const editPayment = (payment: Payment) => {
-    reset(payment);
+    // Passa apenas os campos do formulário, sem id e userId
+    reset({
+      type: payment.type,
+      cardNumber: payment.cardNumber,
+      expiry: payment.expiry,
+      cvv: payment.cvv,
+      name: payment.name,
+      isDefault: payment.isDefault,
+    });
     setPaymentType(payment.type);
     setEditingId(payment.id);
     setModalVisible(true);
@@ -160,8 +155,6 @@ const PaymentScreen = () => {
     const types: any = {
       credit: '💳 Cartão de Crédito',
       debit: '💳 Cartão de Débito',
-      cash: '💵 Dinheiro',
-      pix: '📱 PIX'
     };
     return types[type] || type;
   };
@@ -203,14 +196,6 @@ const PaymentScreen = () => {
                   <Text style={styles.label}>Nome no Cartão:</Text>
                   <Text style={styles.value}>{item.name}</Text>
                 </>
-              )}
-
-              {item.type === 'cash' && (
-                <Text style={styles.cashNote}>Pagamento na entrega em dinheiro</Text>
-              )}
-
-              {item.type === 'pix' && (
-                <Text style={styles.cashNote}>Pagamento via PIX na entrega</Text>
               )}
 
               <View style={styles.cardButtons}>
@@ -287,23 +272,15 @@ const PaymentScreen = () => {
                   <View style={styles.radioRow}>
                     <RadioButton.Item label="💳 Cartão de Débito" value="debit" color="#b71c1c" />
                   </View>
-                  <View style={styles.radioRow}>
-                    <RadioButton.Item label="💵 Dinheiro" value="cash" color="#b71c1c" />
-                  </View>
-                  <View style={styles.radioRow}>
-                    <RadioButton.Item label="📱 PIX" value="pix" color="#b71c1c" />
-                  </View>
                 </RadioButton.Group>
               )}
             />
             {errors.type && <Text style={styles.error}>{errors.type.message}</Text>}
 
-            {/* Campos de Cartão (aparecem apenas para crédito/débito) */}
-            {(paymentType === 'credit' || paymentType === 'debit') && (
-              <>
-                <Controller
-                  control={control}
-                  name="cardNumber"
+            {/* Campos de Cartão */}
+            <Controller
+              control={control}
+              name="cardNumber"
                   render={({ field: { onChange, value } }) => (
                     <PaperInput
                       label="Número do Cartão *"
@@ -384,21 +361,9 @@ const PaymentScreen = () => {
                       activeUnderlineColor="#b71c1c"
                       autoCapitalize="characters"
                     />
-                  )}
-                />
-                {errors.name && <Text style={styles.error}>{errors.name.message}</Text>}
-              </>
-            )}
-
-            {(paymentType === 'cash' || paymentType === 'pix') && (
-              <View style={styles.infoBox}>
-                <Text style={styles.infoText}>
-                  {paymentType === 'cash' 
-                    ? '💵 Pagamento em dinheiro será feito na entrega. Tenha o valor separado!' 
-                    : '📱 Pagamento via PIX será realizado na entrega através de QR Code.'}
-                </Text>
-              </View>
-            )}
+              )}
+            />
+            {errors.name && <Text style={styles.error}>{errors.name.message}</Text>}
 
             <View style={{ height: 12 }} />
 

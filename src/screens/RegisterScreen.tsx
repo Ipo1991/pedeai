@@ -26,18 +26,6 @@ const schema = yup.object({
       const [day, month, year] = value.split('/').map(Number);
       const date = new Date(year, month - 1, day);
       return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
-    })
-    .test('age', 'Você deve ter no mínimo 18 anos', (value) => {
-      if (!value) return false;
-      const [day, month, year] = value.split('/').map(Number);
-      const birthDate = new Date(year, month - 1, day);
-      const today = new Date();
-      const age = today.getFullYear() - birthDate.getFullYear();
-      const monthDiff = today.getMonth() - birthDate.getMonth();
-      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-        return age - 1 >= 18;
-      }
-      return age >= 18;
     }),
   password: yup.string()
     .required('Senha é obrigatória')
@@ -108,8 +96,40 @@ const RegisterScreen = () => {
       });
       // Navegação automática quando o token for definido
     } catch (err: any) {
-      setSnackbar({ visible: true, message: err.message || 'Erro ao criar conta', type: 'error' });
-      console.error('❌ Erro ao criar conta:', err.message || err);
+      console.log('Register error:', err);
+      
+      // Mensagens amigáveis baseadas no erro
+      let errorMessage = 'Erro ao criar conta. Tente novamente.';
+      
+      if (err.response?.status === 409) {
+        errorMessage = 'Este email já está cadastrado. Tente fazer login.';
+      } else if (err.response?.status === 400) {
+        // Pega mensagens do backend (validações do class-validator)
+        const backendMessages = err.response?.data?.message;
+        if (Array.isArray(backendMessages) && backendMessages.length > 0) {
+          // Mostra a primeira mensagem de validação
+          errorMessage = backendMessages[0];
+        } else if (typeof backendMessages === 'string') {
+          errorMessage = backendMessages;
+        } else {
+          errorMessage = 'Dados inválidos. Verifique as informações digitadas.';
+        }
+      } else if (err.response?.status >= 500) {
+        errorMessage = 'Erro no servidor. Tente novamente em alguns instantes.';
+      } else if (err.message?.includes('Network')) {
+        errorMessage = 'Sem conexão com o servidor. Verifique sua internet.';
+      } else if (err.response?.data?.message) {
+        // Se o backend retornar uma mensagem específica
+        const backendMsg = err.response.data.message;
+        if (typeof backendMsg === 'string' && backendMsg.includes('already exists')) {
+          errorMessage = 'Este email já está cadastrado. Tente fazer login.';
+        } else if (typeof backendMsg === 'string') {
+          errorMessage = backendMsg;
+        }
+      }
+      
+      setSnackbar({ visible: true, message: errorMessage, type: 'error' });
+      console.error('❌ Erro ao criar conta:', err.response?.data || err.message || err);
     } finally {
       setLoading(false);
     }

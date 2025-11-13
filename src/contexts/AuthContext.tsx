@@ -1,5 +1,7 @@
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAppDispatch } from '../store/hooks';
+import { loginThunk, registerThunk, logoutThunk } from '../store/authSlice';
 // Usando ApiService real para conectar ao backend NestJS
 import api, { setAuthToken } from '../services/ApiService';
 // import api, { setAuthToken } from '../services/MockApiService'; // Descomente para usar mock
@@ -25,6 +27,7 @@ export const AuthContext = createContext<AuthContextData | undefined>(undefined)
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const dispatch = useAppDispatch();
 
   useEffect(() => {
     (async () => {
@@ -43,29 +46,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   async function signIn(email: string, password: string) {
-  const res = await api.post('/auth/login', { email, password });
-  const { access_token, ...userData } = res.data;
-  setToken(access_token);
-  setUser(userData);
-  setAuthToken(access_token);
-  await AsyncStorage.setItem('@pedeai:token', access_token);
-  await AsyncStorage.setItem('@pedeai:user', JSON.stringify(userData));
+    const result = await dispatch(loginThunk({ email, password })).unwrap();
+    const { token: access_token, isAdmin, ...userData } = result as any;
+    setToken(access_token);
+    setUser({ id: userData.id || 0, name: userData.name || '', email: userData.email || email });
+    await AsyncStorage.setItem('@pedeai:token', access_token);
+    await AsyncStorage.setItem('@pedeai:user', JSON.stringify({ id: userData.id, name: userData.name, email: userData.email }));
   }
 
   async function signUp(data: any) {
-    const res = await api.post('/auth/register', data);
-    const { access_token, ...userData } = res.data;
+    const result = await dispatch(registerThunk(data)).unwrap();
+    const { token: access_token, isAdmin, ...userData } = result as any;
     setToken(access_token);
-    setUser(userData);
-    setAuthToken(access_token);
+    setUser({ id: userData.id || 0, name: userData.name || '', email: userData.email || data.email });
     await AsyncStorage.setItem('@pedeai:token', access_token);
-    await AsyncStorage.setItem('@pedeai:user', JSON.stringify(userData));
+    await AsyncStorage.setItem('@pedeai:user', JSON.stringify({ id: userData.id, name: userData.name, email: userData.email }));
   }
 
   async function signOut() {
+    await dispatch(logoutThunk());
     setToken(null);
     setUser(null);
-    setAuthToken(null);
     await AsyncStorage.removeItem('@pedeai:token');
     await AsyncStorage.removeItem('@pedeai:user');
   }

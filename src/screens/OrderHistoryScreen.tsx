@@ -249,29 +249,81 @@ const OrderHistoryScreen = () => {
 
               {/* Ações do pedido */}
               {item.status !== 'cancelled' && item.status !== 'delivered' && (
-                <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
-                  <Text
-                    onPress={() => {
-                      // Avança para o próximo status válido
-                      const nextStatus = 
-                        item.status === 'pending' ? 'confirmed' :
-                        item.status === 'confirmed' ? 'preparing' :
-                        item.status === 'preparing' ? 'delivering' :
-                        item.status === 'delivering' ? 'delivered' : null;
-                      
-                      if (nextStatus) {
-                        dispatch(updateOrderThunk({ id: item.id, order: { status: nextStatus } }));
-                      }
-                    }}
-                    style={{ paddingVertical: 6, paddingHorizontal: 10, backgroundColor: '#2e7d32', color: '#fff', borderRadius: 8 }}
-                  >
-                    Avançar
+                <View style={{ marginTop: 10, gap: 8 }}>
+                  {item.status === 'pending' && (
+                    <>
+                      <Text
+                        onPress={() => dispatch(updateOrderThunk({ id: item.id, order: { status: 'delivered' } }))}
+                        style={{ 
+                          paddingVertical: 10, 
+                          paddingHorizontal: 16, 
+                          backgroundColor: '#4caf50', 
+                          color: '#fff', 
+                          borderRadius: 8,
+                          textAlign: 'center',
+                          fontWeight: '600'
+                        }}
+                      >
+                        ✅ Marcar como Entregue (Demo)
+                      </Text>
+                      <Text
+                        onPress={() => dispatch(updateOrderThunk({ id: item.id, order: { status: 'cancelled' } }))}
+                        style={{ 
+                          paddingVertical: 10, 
+                          paddingHorizontal: 16, 
+                          backgroundColor: '#d32f2f', 
+                          color: '#fff', 
+                          borderRadius: 8,
+                          textAlign: 'center',
+                          fontWeight: '600'
+                        }}
+                      >
+                        ❌ Cancelar Pedido
+                      </Text>
+                    </>
+                  )}
+                  {item.status !== 'pending' && (
+                    <Text style={{ 
+                      paddingVertical: 10, 
+                      paddingHorizontal: 16, 
+                      backgroundColor: '#e0e0e0', 
+                      color: '#666', 
+                      borderRadius: 8,
+                      textAlign: 'center',
+                      fontSize: 12
+                    }}>
+                      ℹ️ Pedido em andamento
+                    </Text>
+                  )}
+                </View>
+              )}
+
+              {item.status === 'cancelled' && (
+                <View style={{ 
+                  marginTop: 10, 
+                  padding: 10, 
+                  backgroundColor: '#ffebee', 
+                  borderRadius: 8,
+                  borderLeftWidth: 4,
+                  borderLeftColor: '#f44336'
+                }}>
+                  <Text style={{ color: '#d32f2f', fontSize: 12, textAlign: 'center' }}>
+                    ❌ Pedido cancelado
                   </Text>
-                  <Text
-                    onPress={() => dispatch(updateOrderThunk({ id: item.id, order: { status: 'cancelled' } }))}
-                    style={{ paddingVertical: 6, paddingHorizontal: 10, backgroundColor: '#d32f2f', color: '#fff', borderRadius: 8 }}
-                  >
-                    Cancelar
+                </View>
+              )}
+
+              {item.status === 'delivered' && (
+                <View style={{ 
+                  marginTop: 10, 
+                  padding: 10, 
+                  backgroundColor: '#e8f5e9', 
+                  borderRadius: 8,
+                  borderLeftWidth: 4,
+                  borderLeftColor: '#4caf50'
+                }}>
+                  <Text style={{ color: '#2e7d32', fontSize: 12, textAlign: 'center' }}>
+                    ✅ Pedido entregue com sucesso!
                   </Text>
                 </View>
               )}

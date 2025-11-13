@@ -4,7 +4,12 @@ import api from '../services/ApiService';
 
 export const login = async (email: string, password: string) => {
   const res = await api.post('/auth/login', { email, password });
-  return res.data.access_token; // Backend retorna access_token
+  console.log('🔑 Login response:', res.data);
+  console.log('🔑 isAdmin:', res.data.isAdmin);
+  return {
+    token: res.data.access_token,
+    isAdmin: res.data.isAdmin || false,
+  };
 };
 
 export const register = async (email: string, password: string, name: string, phone?: string, birth_date?: string) => {
@@ -17,7 +22,10 @@ export const register = async (email: string, password: string, name: string, ph
     if (m) bd = `${m[3]}-${m[2]}-${m[1]}`;
   }
   const res = await api.post('/auth/register', { email, password, name, phone: cleanPhone, birth_date: bd });
-  return res.data.access_token; // Backend retorna access_token
+  return {
+    token: res.data.access_token,
+    isAdmin: res.data.isAdmin || false,
+  };
 };
 
 export const logout = async () => {
@@ -79,6 +87,7 @@ export const updateAddress = async (id: number, address: any) => {
     zip: String(address.zip).replace(/\D/g, ''),
     is_default: address.isDefault !== undefined ? !!address.isDefault : undefined,
   };
+  console.log('🔄 updateAddress API call:', id, payload);
   const res = await api.patch(`/addresses/${id}`, payload);
   return res.data;
 };
@@ -88,33 +97,30 @@ export const deleteAddress = async (id: number) => {
   return res.data;
 };
 
-// Payments - Backend não tem módulo de payments ainda
-// Mantendo mock local ou deixar vazio
-import MockApiService from '../services/MockApiService';
-
+// Payments
 export const getPayments = async () => {
-  const res = await MockApiService.get('/users/me/payments');
+  const res = await api.get('/payments/my');
   return res.data;
 };
 
 export const createPayment = async (payload: any) => {
-  const res = await MockApiService.post('/users/me/payments', payload);
+  const res = await api.post('/payments', payload);
   return res.data;
 };
 
 export const updatePayment = async (id: number, payment: any) => {
-  const res = await MockApiService.put(`/payments/${id}`, payment);
+  const res = await api.patch(`/payments/${id}`, payment);
   return res.data;
 };
 
 export const deletePayment = async (id: number) => {
-  const res = await MockApiService.delete(`/payments/${id}`);
+  const res = await api.delete(`/payments/${id}`);
   return res.data;
 };
 
 // Cart - Backend não tem carrinho separado, gerenciar no frontend
 // Usar AsyncStorage local ou manter MockApiService apenas para cart
-// import MockApiService from '../services/MockApiService'; // já importado acima
+import MockApiService from '../services/MockApiService';
 
 export const getCart = async () => {
   const res = await MockApiService.get('/cart');

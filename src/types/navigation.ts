@@ -12,6 +12,8 @@ export type RootStackParamList = {
   Restaurants: undefined;
   RestaurantDetail: { id: number };
   Checkout: undefined;
+  AdminRestaurants: undefined;
+  AdminProducts: undefined;
 };
 
 export type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
