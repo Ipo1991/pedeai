@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { Card } from 'react-native-paper';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -98,9 +98,13 @@ const RestaurantsScreen: React.FC = () => {
           <Card style={styles.card}>
             <Card.Content>
               <View style={styles.cardHeader}>
-                <Text style={styles.restaurantImage}>
-                  {categoryEmojis[restaurant.category] || '🍽️'}
-                </Text>
+                {restaurant.image ? (
+                  <Image source={{ uri: restaurant.image }} style={styles.restaurantImagePhoto} />
+                ) : (
+                  <Text style={styles.restaurantImageEmoji}>
+                    {categoryEmojis[restaurant.category] || '🍽️'}
+                  </Text>
+                )}
                 <View style={styles.restaurantInfo}>
                   <Text style={styles.restaurantName}>{restaurant.name}</Text>
                   <Text style={styles.category}>{restaurant.category}</Text>
@@ -171,7 +175,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  restaurantImage: {
+  restaurantImagePhoto: {
+    width: 70,
+    height: 70,
+    borderRadius: 12,
+    marginRight: 16,
+  },
+  restaurantImageEmoji: {
     fontSize: 48,
     marginRight: 16,
   },

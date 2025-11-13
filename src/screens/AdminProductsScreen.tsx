@@ -9,6 +9,7 @@ import {
   Modal,
   ScrollView,
   Alert,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
@@ -25,20 +26,35 @@ interface Product {
   restaurant?: {
     id: number;
     name: string;
+    category?: string;
   };
 }
 
 interface Restaurant {
   id: number;
   name: string;
+  category?: string;
 }
+
+const categoryEmojis: Record<string, string> = {
+  'Italiana': '🍝',
+  'Pizzaria': '🍕',
+  'Japonesa': '🍣',
+  'Hamburguer': '🍔',
+  'Hamburgueria': '🍔',
+  'Mexicana': '🌮',
+  'Brasileira': '🍴',
+  'Churrascaria': '🥩',
+};
 
 export default function AdminProductsScreen() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [searchText, setSearchText] = useState('');
   
   const [formData, setFormData] = useState({
     name: '',
@@ -59,11 +75,27 @@ export default function AdminProductsScreen() {
         api.get('/restaurants'),
       ]);
       setProducts(productsRes.data);
+      setFilteredProducts(productsRes.data);
       setRestaurants(restaurantsRes.data);
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSearch = (text: string) => {
+    setSearchText(text);
+    if (text.trim() === '') {
+      setFilteredProducts(products);
+    } else {
+      const filtered = products.filter(
+        (product) =>
+          product.name.toLowerCase().includes(text.toLowerCase()) ||
+          product.description.toLowerCase().includes(text.toLowerCase()) ||
+          product.restaurant?.name.toLowerCase().includes(text.toLowerCase())
+      );
+      setFilteredProducts(filtered);
     }
   };
 
@@ -151,10 +183,17 @@ export default function AdminProductsScreen() {
 
   const renderProduct = ({ item }: { item: Product }) => (
     <View style={styles.productCard}>
+      {item.image ? (
+        <Image source={{ uri: item.image }} style={styles.productImage} />
+      ) : (
+        <Text style={styles.productEmoji}>
+          {item.restaurant?.category ? (categoryEmojis[item.restaurant.category] || '🍽️') : '🍽️'}
+        </Text>
+      )}
       <View style={styles.productInfo}>
         <Text style={styles.productName}>{item.name}</Text>
         <Text style={styles.productDescription}>{item.description}</Text>
-        <Text style={styles.productPrice}>R$ {Number(item.price || 0).toFixed(2)}</Text>
+        <Text style={styles.productPrice}>💰 R$ {Number(item.price || 0).toFixed(2)}</Text>
         {item.restaurant && (
           <Text style={styles.productRestaurant}>🏪 {item.restaurant.name}</Text>
         )}
@@ -179,14 +218,32 @@ export default function AdminProductsScreen() {
         </TouchableOpacity>
       </View>
 
+      <View style={styles.searchContainer}>
+        <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Buscar por nome, descrição ou restaurante..."
+          value={searchText}
+          onChangeText={handleSearch}
+        />
+        {searchText.length > 0 && (
+          <TouchableOpacity onPress={() => handleSearch('')}>
+            <Ionicons name="close-circle" size={20} color="#999" />
+          </TouchableOpacity>
+        )}
+      </View>
+
       {loading ? (
         <Text style={styles.loadingText}>Carregando...</Text>
       ) : (
         <FlatList
-          data={products}
+          data={filteredProducts}
           renderItem={renderProduct}
           keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={styles.list}
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>Nenhum produto encontrado</Text>
+          }
         />
       )}
 
@@ -287,6 +344,23 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    padding: 0,
+  },
   title: {
     fontSize: 20,
     fontWeight: 'bold',
@@ -299,6 +373,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 20,
     color: '#666',
+  },
+  emptyText: {
+    textAlign: 'center',
+    marginTop: 40,
+    fontSize: 16,
+    color: '#999',
   },
   list: {
     padding: 16,
@@ -314,6 +394,17 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    alignItems: 'center',
+  },
+  productImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    marginRight: 12,
+  },
+  productEmoji: {
+    fontSize: 40,
+    marginRight: 12,
   },
   productInfo: {
     flex: 1,

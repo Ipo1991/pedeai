@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { Button, TextInput as PaperInput, Card, Portal, Modal, Switch } from 'react-native-paper';
+import { View, Text, FlatList, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
+import { Button, TextInput as PaperInput, Card, Portal, Modal, Switch, Dialog, Paragraph } from 'react-native-paper';
 import { useForm, Controller, SubmitHandler } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -9,7 +9,8 @@ import { fetchAddresses, createAddressThunk, updateAddressThunk, deleteAddressTh
 import { RootState } from '../store/store';
 import { useNavigation, useFocusEffect } from '@react-navigation/native'; 
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'; 
-import { RootStackParamList } from '../navigation/Navigation'; 
+import { RootStackParamList } from '../navigation/Navigation';
+import SnackbarNotification from '../components/SnackbarNotification'; 
 
 
 // Interface única extendida
@@ -17,20 +18,16 @@ interface Address {
   id: number;
   street: string;
   number: string;
-  complement?: string;
-  neighborhood: string;
   city: string;
   state: string;
   zip: string; // armazenado com máscara no form, normalizado na API
   isDefault: boolean;
 }
 type AddressScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Addresses'>;
-// Form type: manter "complement" presente (pode ser undefined) para alinhar com inferência do yupResolver
+// Form type
 type AddressForm = {
   street: string;
   number: string;
-  complement?: string; // opcional
-  neighborhood: string;
   city: string;
   state: string;
   zip: string;
@@ -47,8 +44,6 @@ const schema = yup.object({
       const v = String(val).trim().toUpperCase();
       return v === 'S/N' || /^\d+$/.test(v);
     }),
-  complement: yup.string().optional(),
-  neighborhood: yup.string().required('Bairro é obrigatório').min(2, 'Muito curto'),
   city: yup.string().required('Cidade é obrigatória').min(2, 'Muito curto'),
   state: yup
     .string()
@@ -75,14 +70,19 @@ const AddressScreen = () => {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [noNumber, setNoNumber] = useState(false);
   const [loadingCep, setLoadingCep] = useState(false);
+  const [snackbar, setSnackbar] = useState({ visible: false, message: '', type: 'info' as 'success' | 'error' | 'warning' | 'info' });
+  const [errorDialog, setErrorDialog] = useState({ visible: false, title: '', message: '' });
+
+  // Debug snackbar state
+  useEffect(() => {
+    console.log('🔔 Snackbar state changed:', snackbar);
+  }, [snackbar]);
 
   const { control, handleSubmit, reset, formState: { errors }, setValue, watch } = useForm<AddressForm>({
     resolver: yupResolver(schema) as any,
     defaultValues: {
       street: '',
       number: '',
-      complement: '',
-      neighborhood: '',
       city: '',
       state: '',
       zip: '',
@@ -143,10 +143,10 @@ const AddressScreen = () => {
     try {
       if (editingId) {
         console.log('🏠 AddressScreen: Updating address', editingId);
-        await dispatch(updateAddressThunk({ id: editingId, address: data }));
+        await dispatch(updateAddressThunk({ id: editingId, address: data })).unwrap();
       } else {
         console.log('🏠 AddressScreen: Creating new address');
-        await dispatch(createAddressThunk(data));
+        await dispatch(createAddressThunk(data)).unwrap();
       }
       
       // Backend cuida da lógica de endereço padrão, apenas recarrega a lista
@@ -155,17 +155,39 @@ const AddressScreen = () => {
       setModalVisible(false);
       reset();
       setNoNumber(false);
-    } catch (error) {
+      
+      // Delay para garantir que o modal fechou antes de mostrar o snackbar
+      setTimeout(() => {
+        setSnackbar({ visible: true, message: editingId ? 'Endereço atualizado!' : 'Endereço adicionado!', type: 'success' });
+      }, 100);
+    } catch (error: any) {
       console.error('🏠 AddressScreen: Error submitting form', error);
+      
+      // Quando unwrap() rejeita, o error já é a mensagem string do rejectWithValue
+      let errorMessage = 'Erro ao salvar endereço. Tente novamente.';
+      
+      if (typeof error === 'string') {
+        errorMessage = error;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      console.log('🏠 Setting snackbar with error:', errorMessage);
+      
+      // Usar Snackbar dentro do Portal
+      setSnackbar({
+        visible: true,
+        message: errorMessage,
+        type: 'error'
+      });
     }
   };
 
   const editAddress = (address: Address) => {
-    // Formata o CEP e garante que não há valores null
+    // Formata o CEP
     const formattedAddress = {
       ...address,
       zip: formatCEP(address.zip), // Aplica máscara no CEP
-      complement: address.complement || '', // Garante string vazia em vez de null
     };
     reset(formattedAddress);
     setNoNumber(String(address.number).toUpperCase() === 'S/N');
@@ -173,13 +195,36 @@ const AddressScreen = () => {
     setModalVisible(true);
   };
 
-  const deleteAddr = (id: number) => {
-    dispatch(deleteAddressThunk(id));
+  const deleteAddr = async (id: number) => {
+    try {
+      await dispatch(deleteAddressThunk(id)).unwrap();
+      await dispatch(fetchAddresses());
+      setSnackbar({ visible: true, message: 'Endereço excluído!', type: 'success' });
+    } catch (error: any) {
+      console.error('🏠 AddressScreen: Error deleting address', error);
+      
+      // Quando unwrap() rejeita, o error já é a mensagem string do rejectWithValue
+      let errorMessage = 'Erro ao excluir endereço. Tente novamente.';
+      
+      if (typeof error === 'string') {
+        errorMessage = error;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      // Usar Snackbar dentro do Portal
+      setSnackbar({
+        visible: true,
+        message: errorMessage,
+        type: 'error'
+      });
+    }
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Meus Endereços</Text>
+    <>
+      <ScrollView contentContainerStyle={styles.container}>
+        <Text style={styles.title}>Meus Endereços</Text>
 
       <FlatList
         data={sortedAddresses}
@@ -241,8 +286,23 @@ const AddressScreen = () => {
         textColor="white"
         style={styles.addButton}
         onPress={() => {
+          if (sortedAddresses.length >= 2) {
+            setSnackbar({
+              visible: true,
+              message: 'Você já possui o máximo de 2 endereços cadastrados',
+              type: 'error'
+            });
+            return;
+          }
           setEditingId(null);
-          reset();
+          reset({
+            street: '',
+            number: '',
+            city: '',
+            state: '',
+            zip: '',
+            isDefault: false,
+          });
           setNoNumber(false);
           setModalVisible(true);
         }}
@@ -317,43 +377,6 @@ const AddressScreen = () => {
                 color="#b71c1c"
               />
             </View>
-
-            {/* Cidade */}
-            {/* Complemento */}
-            <Controller
-              control={control}
-              name="complement"
-              render={({ field: { onChange, value } }) => (
-                <PaperInput
-                  label="Complemento (opcional)"
-                  value={value}
-                  onChangeText={onChange}
-                  style={[styles.input, styles.textInput]}
-                  left={<PaperInput.Icon icon="plus" color="#b71c1c" />}
-                  activeUnderlineColor="#b71c1c"
-                  textColor="#000"
-                />
-              )}
-            />
-
-            {/* Bairro */}
-            <Controller
-              control={control}
-              name="neighborhood"
-              render={({ field: { onChange, value } }) => (
-                <PaperInput
-                  label="Bairro"
-                  value={value}
-                  onChangeText={onChange}
-                  error={!!errors.neighborhood}
-                  style={[styles.input, styles.textInput]}
-                  left={<PaperInput.Icon icon="map" color="#b71c1c" />}
-                  activeUnderlineColor="#b71c1c"
-                  textColor="#000"
-                />
-              )}
-            />
-            {errors.neighborhood && <Text style={styles.error}>{errors.neighborhood.message}</Text>}
 
             {/* Cidade */}
             <Controller
@@ -451,8 +474,20 @@ const AddressScreen = () => {
             </Button>
           </View>
         </Modal>
+
+        <SnackbarNotification
+          visible={snackbar.visible}
+          message={snackbar.message}
+          type={snackbar.type}
+          duration={5000}
+          onDismiss={() => {
+            console.log('🔔 Snackbar onDismiss called');
+            setSnackbar({ visible: false, message: '', type: 'info' });
+          }}
+        />
       </Portal>
-    </ScrollView>
+      </ScrollView>
+    </>
   );
 };
 

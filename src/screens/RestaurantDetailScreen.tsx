@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Image } from 'react-native';
 import { Button, Card, IconButton } from 'react-native-paper';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
@@ -235,9 +235,13 @@ const RestaurantDetailScreen: React.FC = () => {
             <Card key={product.id} style={styles.productCard}>
               <Card.Content>
                 <View style={styles.productHeader}>
-                  <Text style={styles.productImage}>
-                    {getProductEmoji(product.name)}
-                  </Text>
+                  {product.image ? (
+                    <Image source={{ uri: product.image }} style={styles.productImagePhoto} />
+                  ) : (
+                    <Text style={styles.productImageEmoji}>
+                      {getProductEmoji(product.name)}
+                    </Text>
+                  )}
                   <View style={styles.productInfo}>
                     <Text style={styles.productName}>{product.name}</Text>
                     <Text style={styles.productDescription}>{product.description}</Text>
@@ -372,7 +376,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginBottom: 12,
   },
-  productImage: {
+  productImagePhoto: {
+    width: 60,
+    height: 60,
+    borderRadius: 12,
+    marginRight: 12,
+  },
+  productImageEmoji: {
     fontSize: 40,
     marginRight: 12,
   },

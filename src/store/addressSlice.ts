@@ -23,13 +23,22 @@ export const updateAddressThunk = createAsyncThunk('addresses/update', async ({ 
     console.log('✅ updateAddressThunk: Success', result);
     return result;
   } catch (error: any) {
-    console.error('❌ updateAddressThunk: Error', error);
-    return rejectWithValue(error.message || 'Unknown error');
+    const message = error?.response?.data?.message || error?.message || 'Unknown error';
+    console.error('❌ updateAddressThunk: Error', message, error?.response?.data || '');
+    return rejectWithValue(message);
   }
 });
 
-export const deleteAddressThunk = createAsyncThunk('addresses/delete', async (id: number) => {
-  return await deleteAddress(id);
+export const deleteAddressThunk = createAsyncThunk('addresses/delete', async (id: number, { rejectWithValue }) => {
+  try {
+    const result = await deleteAddress(id);
+    console.log('✅ deleteAddressThunk: Success', result);
+    return result;
+  } catch (error: any) {
+    const message = error?.response?.data?.message || error?.message || 'Unknown error';
+    console.error('❌ deleteAddressThunk: Error', message, error?.response?.data || '');
+    return rejectWithValue(message);
+  }
 });
 
 const addressSlice = createSlice({

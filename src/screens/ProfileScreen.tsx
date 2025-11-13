@@ -3,7 +3,7 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert } from 'rea
 import { Avatar, Card, Divider, Button, Modal, Portal, TextInput as PaperInput } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { AuthContext } from '../contexts/AuthContext';
-import { getProfile, updateProfile, deleteProfile } from '../api/api';
+import { getProfile, updateProfile, deleteProfile, changePassword } from '../api/api';
 import SnackbarNotification from '../components/SnackbarNotification';
 
 export default function ProfileScreen() {
@@ -39,6 +39,28 @@ export default function ProfileScreen() {
     return `${cleaned.slice(0, 2)}/${cleaned.slice(2, 4)}/${cleaned.slice(4, 8)}`;
   };
 
+  const formatPhoneDisplay = (phone: string) => {
+    if (!phone) return 'Não informado';
+    const cleaned = phone.replace(/\D/g, '');
+    if (cleaned.length === 11) {
+      return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
+    }
+    if (cleaned.length === 10) {
+      return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 6)}-${cleaned.slice(6)}`;
+    }
+    return phone;
+  };
+
+  const formatBirthDateDisplay = (birthDate: string) => {
+    if (!birthDate) return 'Não informado';
+    // Se vier no formato yyyy-MM-dd, converter para dd/MM/yyyy
+    if (/^\d{4}-\d{2}-\d{2}$/.test(birthDate)) {
+      const [year, month, day] = birthDate.split('-');
+      return `${day}/${month}/${year}`;
+    }
+    return birthDate;
+  };
+
   useEffect(() => {
     loadProfile();
   }, []);
@@ -47,10 +69,14 @@ export default function ProfileScreen() {
     try {
       setLoading(true);
       const data = await getProfile();
+      console.log('=== PROFILE DATA ===');
+      console.log('Data completa:', data);
+      console.log('birth_date:', data.birth_date);
+      console.log('birthDate:', data.birthDate);
       setProfile(data);
       setEditName(data.name || '');
       setEditPhone(data.phone || '');
-      setEditBirthDate(data.birthDate || '');
+      setEditBirthDate(data.birthDate || ''); // backend retorna birthDate (camelCase)
     } catch (e) {
       console.error('Erro ao carregar perfil:', e);
     } finally {
@@ -64,18 +90,23 @@ export default function ProfileScreen() {
 
   const handleSaveProfile = async () => {
     try {
-      await updateProfile({
+      const payload = {
         name: editName,
         phone: editPhone,
-        birthDate: editBirthDate,
-      });
+        birth_date: editBirthDate, // snake_case para o backend
+      };
+      console.log('=== ENVIANDO PARA API ===');
+      console.log('Payload:', payload);
+      
+      await updateProfile(payload);
       setEditModalVisible(false);
       loadProfile();
       setSnackbar({ visible: true, message: 'Perfil atualizado com sucesso!', type: 'success' });
       console.log('✅ Perfil atualizado com sucesso!');
     } catch (e: any) {
-      setSnackbar({ visible: true, message: e.message || 'Erro ao atualizar perfil', type: 'error' });
-      console.error('❌ Erro ao atualizar perfil:', e.message);
+      const errorMessage = e?.response?.data?.message || e.message || 'Erro ao atualizar perfil';
+      setSnackbar({ visible: true, message: errorMessage, type: 'error' });
+      console.error('❌ Erro ao atualizar perfil:', errorMessage);
     }
   };
 
@@ -83,23 +114,7 @@ export default function ProfileScreen() {
     setPasswordModalVisible(true);
   };
 
-  const handleDeleteAccount = async () => {
-    const confirmed = window.confirm('Esta ação é permanente. Deseja excluir sua conta?');
-    if (confirmed) {
-      try {
-        await deleteProfile();
-        setSnackbar({ visible: true, message: 'Sua conta foi removida com sucesso.', type: 'success' });
-        console.log('✅ Sua conta foi removida com sucesso.');
-        // Força signOut via AuthContext
-        setTimeout(() => auth.signOut(), 1500);
-      } catch (e: any) {
-        setSnackbar({ visible: true, message: e.message || 'Falha ao excluir conta', type: 'error' });
-        console.error('❌ Falha ao excluir conta:', e.message);
-      }
-    }
-  };
-
-  const handleSavePassword = () => {
+  const handleSavePassword = async () => {
     if (!currentPassword || !newPassword || !confirmNewPassword) {
       setSnackbar({ visible: true, message: 'Preencha todos os campos', type: 'warning' });
       return;
@@ -115,13 +130,19 @@ export default function ProfileScreen() {
       return;
     }
     
-    // Aqui você implementaria a chamada à API para alterar senha
-    setPasswordModalVisible(false);
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmNewPassword('');
-    setSnackbar({ visible: true, message: 'Senha alterada com sucesso!', type: 'success' });
-    console.log('✅ Senha alterada com sucesso!');
+    try {
+      await changePassword(currentPassword, newPassword);
+      setPasswordModalVisible(false);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+      setSnackbar({ visible: true, message: 'Senha alterada com sucesso!', type: 'success' });
+      console.log('✅ Senha alterada com sucesso!');
+    } catch (e: any) {
+      const errorMessage = e?.response?.data?.message || e.message || 'Erro ao alterar senha';
+      setSnackbar({ visible: true, message: errorMessage, type: 'error' });
+      console.error('❌ Erro ao alterar senha:', errorMessage);
+    }
   };
 
   if (loading) {
@@ -164,12 +185,12 @@ export default function ProfileScreen() {
             <Divider style={styles.divider} />
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>☎️ Telefone:</Text>
-              <Text style={styles.infoValue}>{profile?.phone || 'Não informado'}</Text>
+              <Text style={styles.infoValue}>{formatPhoneDisplay(profile?.phone)}</Text>
             </View>
             <Divider style={styles.divider} />
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>🎂 Data de Nascimento:</Text>
-              <Text style={styles.infoValue}>{profile?.birthDate || 'Não informado'}</Text>
+              <Text style={styles.infoValue}>{formatBirthDateDisplay(profile?.birthDate)}</Text>
             </View>
           </Card.Content>
         </Card>
@@ -186,39 +207,6 @@ export default function ProfileScreen() {
           </View>
           <Text style={styles.actionArrow}>›</Text>
         </TouchableOpacity>
-
-        <TouchableOpacity style={[styles.actionButton, { borderColor: '#d32f2f', borderWidth: 1 }]} onPress={handleDeleteAccount}>
-          <View style={styles.actionContent}>
-            <Text style={styles.actionIcon}>🗑️</Text>
-            <Text style={[styles.actionText, { color: '#d32f2f' }]}>Excluir Conta</Text>
-          </View>
-          <Text style={[styles.actionArrow, { color: '#d32f2f' }]}>›</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Estatísticas */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Estatísticas</Text>
-        <View style={styles.statsContainer}>
-          <Card style={styles.statCard}>
-            <Card.Content style={styles.statContent}>
-              <Text style={styles.statNumber}>0</Text>
-              <Text style={styles.statLabel}>Pedidos</Text>
-            </Card.Content>
-          </Card>
-          <Card style={styles.statCard}>
-            <Card.Content style={styles.statContent}>
-              <Text style={styles.statNumber}>0</Text>
-              <Text style={styles.statLabel}>Endereços</Text>
-            </Card.Content>
-          </Card>
-          <Card style={styles.statCard}>
-            <Card.Content style={styles.statContent}>
-              <Text style={styles.statNumber}>0</Text>
-              <Text style={styles.statLabel}>Pagamentos</Text>
-            </Card.Content>
-          </Card>
-        </View>
       </View>
 
       <View style={styles.footer}>

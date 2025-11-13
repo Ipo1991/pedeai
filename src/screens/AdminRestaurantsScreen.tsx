@@ -9,6 +9,7 @@ import {
   Modal,
   ScrollView,
   Alert,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../services/ApiService';
@@ -22,16 +23,28 @@ interface Restaurant {
   isActive: boolean;
 }
 
+const categoryEmojis: Record<string, string> = {
+  'Italiana': '🍝',
+  'Pizzaria': '🍕',
+  'Japonesa': '🍣',
+  'Hamburguer': '🍔',
+  'Hamburgueria': '🍔',
+  'Mexicana': '🌮',
+  'Brasileira': '🍴',
+  'Churrascaria': '🥩',
+};
+
 export default function AdminRestaurantsScreen() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [filteredRestaurants, setFilteredRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingRestaurant, setEditingRestaurant] = useState<Restaurant | null>(null);
+  const [searchText, setSearchText] = useState('');
   
   const [formData, setFormData] = useState({
     name: '',
     category: '',
-    delivery_time: '30-40 min',
     image: 'https://via.placeholder.com/300x200',
   });
 
@@ -43,10 +56,25 @@ export default function AdminRestaurantsScreen() {
     try {
       const response = await api.get('/restaurants');
       setRestaurants(response.data);
+      setFilteredRestaurants(response.data);
     } catch (error) {
       console.error('Erro ao carregar restaurantes:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSearch = (text: string) => {
+    setSearchText(text);
+    if (text.trim() === '') {
+      setFilteredRestaurants(restaurants);
+    } else {
+      const filtered = restaurants.filter(
+        (restaurant) =>
+          restaurant.name.toLowerCase().includes(text.toLowerCase()) ||
+          restaurant.category.toLowerCase().includes(text.toLowerCase())
+      );
+      setFilteredRestaurants(filtered);
     }
   };
 
@@ -55,7 +83,6 @@ export default function AdminRestaurantsScreen() {
       const payload = {
         name: formData.name,
         category: formData.category,
-        delivery_time: formData.delivery_time,
         image: formData.image,
       };
 
@@ -105,7 +132,6 @@ export default function AdminRestaurantsScreen() {
       setFormData({
         name: restaurant.name,
         category: restaurant.category,
-        delivery_time: restaurant.delivery_time || '',
         image: restaurant.image || '',
       });
     } else {
@@ -119,19 +145,27 @@ export default function AdminRestaurantsScreen() {
     setFormData({
       name: '',
       category: '',
-      delivery_time: '30-40 min',
       image: 'https://via.placeholder.com/300x200',
     });
   };
 
   const renderRestaurant = ({ item }: { item: Restaurant }) => (
     <View style={styles.restaurantCard}>
+      {item.image ? (
+        <Image source={{ uri: item.image }} style={styles.restaurantImage} />
+      ) : (
+        <Text style={styles.restaurantEmoji}>
+          {categoryEmojis[item.category] || '🍽️'}
+        </Text>
+      )}
       <View style={styles.restaurantInfo}>
         <Text style={styles.restaurantName}>{item.name}</Text>
         <Text style={styles.restaurantCategory}>{item.category}</Text>
-        <Text style={styles.restaurantDetails}>
-          {item.delivery_time || 'N/A'}
-        </Text>
+        {item.delivery_time && (
+          <Text style={styles.restaurantDetails}>
+            🕐 {item.delivery_time}
+          </Text>
+        )}
       </View>
       <View style={styles.actions}>
         <TouchableOpacity onPress={() => openModal(item)} style={styles.editButton}>
@@ -153,14 +187,32 @@ export default function AdminRestaurantsScreen() {
         </TouchableOpacity>
       </View>
 
+      <View style={styles.searchContainer}>
+        <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Buscar por nome ou categoria..."
+          value={searchText}
+          onChangeText={handleSearch}
+        />
+        {searchText.length > 0 && (
+          <TouchableOpacity onPress={() => handleSearch('')}>
+            <Ionicons name="close-circle" size={20} color="#999" />
+          </TouchableOpacity>
+        )}
+      </View>
+
       {loading ? (
         <Text style={styles.loadingText}>Carregando...</Text>
       ) : (
         <FlatList
-          data={restaurants}
+          data={filteredRestaurants}
           renderItem={renderRestaurant}
           keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={styles.list}
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>Nenhum restaurante encontrado</Text>
+          }
         />
       )}
 
@@ -186,14 +238,6 @@ export default function AdminRestaurantsScreen() {
                 value={formData.category}
                 onChangeText={(text) => setFormData({ ...formData, category: text })}
                 placeholder="Ex: Italiana, Japonesa, Brasileira"
-              />
-
-              <Text style={styles.label}>Tempo de Entrega *</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.delivery_time}
-                onChangeText={(text) => setFormData({ ...formData, delivery_time: text })}
-                placeholder="30-40 min"
               />
 
               <Text style={styles.label}>URL da Imagem</Text>
@@ -240,6 +284,23 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    padding: 0,
+  },
   title: {
     fontSize: 20,
     fontWeight: 'bold',
@@ -252,6 +313,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 20,
     color: '#666',
+  },
+  emptyText: {
+    textAlign: 'center',
+    marginTop: 40,
+    fontSize: 16,
+    color: '#999',
   },
   list: {
     padding: 16,
@@ -267,6 +334,17 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    alignItems: 'center',
+  },
+  restaurantImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    marginRight: 12,
+  },
+  restaurantEmoji: {
+    fontSize: 40,
+    marginRight: 12,
   },
   restaurantInfo: {
     flex: 1,

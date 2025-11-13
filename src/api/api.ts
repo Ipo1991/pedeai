@@ -54,6 +54,11 @@ export const deleteProfile = async () => {
   return res.data;
 };
 
+export const changePassword = async (currentPassword: string, newPassword: string) => {
+  const res = await api.post('/users/change-password', { currentPassword, newPassword });
+  return res.data;
+};
+
 // Addresses
 export const getAddresses = async () => {
   const res = await api.get('/addresses/my');

@@ -11,6 +11,7 @@ import { RootState } from '../store/store';
 import { useNavigation, useFocusEffect } from '@react-navigation/native'; 
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'; 
 import { RootStackParamList } from '../navigation/Navigation';
+import SnackbarNotification from '../components/SnackbarNotification';
 
 interface Payment {
   id: number;
@@ -39,17 +40,7 @@ const createSchema = (paymentType: string) => {
     baseSchema.expiry = yup
       .string()
       .required('Validade é obrigatória')
-      .matches(/^\d{2}\/\d{2}$/, 'Formato: MM/AA')
-      .test('valid-expiry', 'Data inválida', (value) => {
-        if (!value) return false;
-        const [month, year] = value.split('/').map(Number);
-        if (month < 1 || month > 12) return false;
-        const currentYear = new Date().getFullYear() % 100;
-        const currentMonth = new Date().getMonth() + 1;
-        if (year < currentYear) return false;
-        if (year === currentYear && month < currentMonth) return false;
-        return true;
-      });
+      .matches(/^\d{2}\/\d{2}$/, 'Formato: MM/AA');
     baseSchema.cvv = yup
       .string()
       .required('CVV é obrigatório')
@@ -71,6 +62,7 @@ const PaymentScreen = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [paymentType, setPaymentType] = useState<string>('credit');
+  const [snackbar, setSnackbar] = useState({ visible: false, message: '', type: 'info' as 'success' | 'error' | 'warning' | 'info' });
 
   const { control, handleSubmit, reset, formState: { errors }, setValue, watch } = useForm<PaymentForm>({
     resolver: yupResolver(createSchema(paymentType)) as any,
@@ -99,6 +91,21 @@ const PaymentScreen = () => {
     }, [dispatch])
   );
 
+  // Reseta formulário quando modal fecha
+  useEffect(() => {
+    if (!modalVisible && !editingId) {
+      reset({
+        type: 'credit',
+        cardNumber: '',
+        expiry: '',
+        cvv: '',
+        name: '',
+        isDefault: false,
+      });
+      setPaymentType('credit');
+    }
+  }, [modalVisible, editingId]);
+
   // Máscaras
   const formatCardNumber = (text: string) => {
     const cleaned = text.replace(/\D/g, '');
@@ -114,6 +121,24 @@ const PaymentScreen = () => {
 
   const onSubmit: SubmitHandler<PaymentForm> = async (data) => {
     console.log('💳 PaymentScreen: Submitting', data);
+    
+    // Validação manual da data de validade para mostrar no Snackbar
+    if (data.expiry) {
+      const [month, year] = data.expiry.split('/').map(Number);
+      const expiryDate = new Date(2000 + year, month, 0);
+      const today = new Date();
+      const oneYearFromNow = new Date(today.getFullYear(), today.getMonth() + 12, today.getDate());
+      
+      if (expiryDate <= oneYearFromNow) {
+        setSnackbar({
+          visible: true,
+          message: 'A validade do cartão deve ser maior que 1 ano a partir da data atual',
+          type: 'error'
+        });
+        return;
+      }
+    }
+    
     try {
       if (editingId) {
         await dispatch(updatePaymentThunk({ id: editingId, payment: data })).unwrap();
@@ -121,14 +146,42 @@ const PaymentScreen = () => {
         await dispatch(createPaymentThunk(data)).unwrap();
       }
       
-      // Recarrega a lista
       await dispatch(fetchPayments());
       
       setModalVisible(false);
-      reset();
+      reset({
+        type: 'credit',
+        cardNumber: '',
+        expiry: '',
+        cvv: '',
+        name: '',
+        isDefault: false,
+      });
       setPaymentType('credit');
-    } catch (error) {
+      
+      setTimeout(() => {
+        setSnackbar({ 
+          visible: true, 
+          message: editingId ? 'Pagamento atualizado!' : 'Pagamento adicionado!', 
+          type: 'success' 
+        });
+      }, 100);
+    } catch (error: any) {
       console.error('💳 PaymentScreen: Error', error);
+      
+      let errorMessage = 'Erro ao salvar pagamento. Tente novamente.';
+      
+      if (typeof error === 'string') {
+        errorMessage = error;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      setSnackbar({
+        visible: true,
+        message: errorMessage,
+        type: 'error'
+      });
     }
   };
 
@@ -147,8 +200,28 @@ const PaymentScreen = () => {
     setModalVisible(true);
   };
 
-  const deletePay = (id: number) => {
-    dispatch(deletePaymentThunk(id));
+  const deletePay = async (id: number) => {
+    try {
+      await dispatch(deletePaymentThunk(id)).unwrap();
+      await dispatch(fetchPayments());
+      setSnackbar({ visible: true, message: 'Pagamento excluído!', type: 'success' });
+    } catch (error: any) {
+      console.error('💳 PaymentScreen: Error deleting payment', error);
+      
+      let errorMessage = 'Erro ao excluir pagamento. Tente novamente.';
+      
+      if (typeof error === 'string') {
+        errorMessage = error;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      setSnackbar({
+        visible: true,
+        message: errorMessage,
+        type: 'error'
+      });
+    }
   };
 
   const getPaymentTypeLabel = (type: string) => {
@@ -235,7 +308,14 @@ const PaymentScreen = () => {
         style={styles.addButton}
         onPress={() => {
           setEditingId(null);
-          reset();
+          reset({
+            type: 'credit',
+            cardNumber: '',
+            expiry: '',
+            cvv: '',
+            name: '',
+            isDefault: false,
+          });
           setPaymentType('credit');
           setModalVisible(true);
         }}
@@ -246,7 +326,10 @@ const PaymentScreen = () => {
       <Portal>
         <Modal
           visible={modalVisible}
-          onDismiss={() => setModalVisible(false)}
+          onDismiss={() => {
+            setModalVisible(false);
+            setEditingId(null);
+          }}
           contentContainerStyle={styles.modalContainer}
         >
           <View style={styles.modalHeader}>
@@ -254,7 +337,13 @@ const PaymentScreen = () => {
             <Text style={styles.modalHeaderTitle}>
               {editingId ? 'Editar Pagamento' : 'Novo Pagamento'}
             </Text>
-            <TouchableOpacity onPress={() => setModalVisible(false)} accessibilityLabel="Fechar">
+            <TouchableOpacity 
+              onPress={() => {
+                setModalVisible(false);
+                setEditingId(null);
+              }} 
+              accessibilityLabel="Fechar"
+            >
               <Text style={styles.modalClose}>✖</Text>
             </TouchableOpacity>
           </View>
@@ -281,86 +370,86 @@ const PaymentScreen = () => {
             <Controller
               control={control}
               name="cardNumber"
+              render={({ field: { onChange, value } }) => (
+                <PaperInput
+                  label="Número do Cartão *"
+                  value={value}
+                  onChangeText={(t) => onChange(formatCardNumber(t))}
+                  error={!!errors.cardNumber}
+                  style={styles.input}
+                  textColor="#000"
+                  left={<PaperInput.Icon icon="credit-card" color="#b71c1c" />}
+                  activeUnderlineColor="#b71c1c"
+                  keyboardType="number-pad"
+                  placeholder="0000 0000 0000 0000"
+                  maxLength={19}
+                />
+              )}
+            />
+            {errors.cardNumber && <Text style={styles.error}>{errors.cardNumber.message}</Text>}
+
+            <View style={styles.row}>
+              <View style={styles.halfInput}>
+                <Controller
+                  control={control}
+                  name="expiry"
                   render={({ field: { onChange, value } }) => (
                     <PaperInput
-                      label="Número do Cartão *"
+                      label="Validade *"
                       value={value}
-                      onChangeText={(t) => onChange(formatCardNumber(t))}
-                      error={!!errors.cardNumber}
+                      onChangeText={(t) => onChange(formatExpiry(t))}
+                      error={!!errors.expiry}
                       style={styles.input}
                       textColor="#000"
-                      left={<PaperInput.Icon icon="credit-card" color="#b71c1c" />}
+                      left={<PaperInput.Icon icon="calendar" color="#b71c1c" />}
                       activeUnderlineColor="#b71c1c"
                       keyboardType="number-pad"
-                      placeholder="0000 0000 0000 0000"
-                      maxLength={19}
+                      placeholder="MM/AA"
+                      maxLength={5}
                     />
                   )}
                 />
-                {errors.cardNumber && <Text style={styles.error}>{errors.cardNumber.message}</Text>}
-
-                <View style={styles.row}>
-                  <View style={styles.halfInput}>
-                    <Controller
-                      control={control}
-                      name="expiry"
-                      render={({ field: { onChange, value } }) => (
-                        <PaperInput
-                          label="Validade *"
-                          value={value}
-                          onChangeText={(t) => onChange(formatExpiry(t))}
-                          error={!!errors.expiry}
-                          style={styles.input}
-                          textColor="#000"
-                          left={<PaperInput.Icon icon="calendar" color="#b71c1c" />}
-                          activeUnderlineColor="#b71c1c"
-                          keyboardType="number-pad"
-                          placeholder="MM/AA"
-                          maxLength={5}
-                        />
-                      )}
-                    />
-                    {errors.expiry && <Text style={styles.error}>{errors.expiry.message}</Text>}
-                  </View>
-                  <View style={styles.halfInput}>
-                    <Controller
-                      control={control}
-                      name="cvv"
-                      render={({ field: { onChange, value } }) => (
-                        <PaperInput
-                          label="CVV *"
-                          value={value}
-                          onChangeText={(t) => onChange(t.replace(/\D/g, ''))}
-                          error={!!errors.cvv}
-                          style={styles.input}
-                          textColor="#000"
-                          left={<PaperInput.Icon icon="lock" color="#b71c1c" />}
-                          activeUnderlineColor="#b71c1c"
-                          keyboardType="number-pad"
-                          maxLength={4}
-                          secureTextEntry
-                        />
-                      )}
-                    />
-                    {errors.cvv && <Text style={styles.error}>{errors.cvv.message}</Text>}
-                  </View>
-                </View>
-
+                {errors.expiry && <Text style={styles.error}>{errors.expiry.message}</Text>}
+              </View>
+              <View style={styles.halfInput}>
                 <Controller
                   control={control}
-                  name="name"
+                  name="cvv"
                   render={({ field: { onChange, value } }) => (
                     <PaperInput
-                      label="Nome no Cartão *"
+                      label="CVV *"
                       value={value}
-                      onChangeText={(t) => onChange(t.toUpperCase())}
-                      error={!!errors.name}
+                      onChangeText={(t) => onChange(t.replace(/\D/g, ''))}
+                      error={!!errors.cvv}
                       style={styles.input}
                       textColor="#000"
-                      left={<PaperInput.Icon icon="account" color="#b71c1c" />}
+                      left={<PaperInput.Icon icon="lock" color="#b71c1c" />}
                       activeUnderlineColor="#b71c1c"
-                      autoCapitalize="characters"
+                      keyboardType="number-pad"
+                      maxLength={4}
+                      secureTextEntry
                     />
+                  )}
+                />
+                {errors.cvv && <Text style={styles.error}>{errors.cvv.message}</Text>}
+              </View>
+            </View>
+
+            <Controller
+              control={control}
+              name="name"
+              render={({ field: { onChange, value } }) => (
+                <PaperInput
+                  label="Nome no Cartão *"
+                  value={value}
+                  onChangeText={(t) => onChange(t.toUpperCase())}
+                  error={!!errors.name}
+                  style={styles.input}
+                  textColor="#000"
+                  left={<PaperInput.Icon icon="account" color="#b71c1c" />}
+                  activeUnderlineColor="#b71c1c"
+                  autoCapitalize="characters"
+                />
               )}
             />
             {errors.name && <Text style={styles.error}>{errors.name.message}</Text>}
@@ -399,6 +488,14 @@ const PaymentScreen = () => {
             </Button>
           </View>
         </Modal>
+
+        <SnackbarNotification
+          visible={snackbar.visible}
+          message={snackbar.message}
+          type={snackbar.type}
+          duration={5000}
+          onDismiss={() => setSnackbar({ visible: false, message: '', type: 'info' })}
+        />
       </Portal>
     </ScrollView>
   );

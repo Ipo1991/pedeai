@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Snackbar } from 'react-native-paper';
 
 interface SnackbarNotificationProps {
@@ -13,9 +13,23 @@ const SnackbarNotification: React.FC<SnackbarNotificationProps> = ({
   visible,
   message,
   onDismiss,
-  duration = 3000,
+  duration = 4000,
   type = 'info',
 }) => {
+  const [internalVisible, setInternalVisible] = useState(false);
+
+  useEffect(() => {
+    if (visible) {
+      // Pequeno delay para evitar que o onDismiss seja chamado imediatamente
+      const timer = setTimeout(() => {
+        setInternalVisible(true);
+      }, 50);
+      return () => clearTimeout(timer);
+    } else {
+      setInternalVisible(false);
+    }
+  }, [visible]);
+
   const getBackgroundColor = () => {
     switch (type) {
       case 'success':
@@ -29,15 +43,20 @@ const SnackbarNotification: React.FC<SnackbarNotificationProps> = ({
     }
   };
 
+  const handleDismiss = () => {
+    setInternalVisible(false);
+    setTimeout(onDismiss, 100);
+  };
+
   return (
     <Snackbar
-      visible={visible}
-      onDismiss={onDismiss}
+      visible={internalVisible}
+      onDismiss={handleDismiss}
       duration={duration}
       style={{ backgroundColor: getBackgroundColor() }}
       action={{
         label: '×',
-        onPress: onDismiss,
+        onPress: handleDismiss,
         textColor: '#fff',
       }}
     >

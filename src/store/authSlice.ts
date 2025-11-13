@@ -20,7 +20,10 @@ export const loginThunk = createAsyncThunk(
   'auth/login',
   async ({ email, password }: { email: string; password: string }, { rejectWithValue }) => {
     try {
+      console.log('=== LOGIN THUNK ===');
+      console.log('Email:', email);
       const result = await login(email, password);
+      console.log('Login result:', result);
       setAuthToken(result.token); // Salvar token no ApiService
       return result;
     } catch (err: any) {

@@ -5,16 +5,34 @@ export const fetchPayments = createAsyncThunk('payments/fetch', async () => {
   return await getPayments();
 });
 
-export const createPaymentThunk = createAsyncThunk('payments/create', async (payment: any) => {
-  return await createPayment(payment);
+export const createPaymentThunk = createAsyncThunk('payments/create', async (payment: any, { rejectWithValue }) => {
+  try {
+    return await createPayment(payment);
+  } catch (error: any) {
+    const message = error?.response?.data?.message || error?.message || 'Erro ao criar pagamento';
+    console.error('❌ createPaymentThunk: Error', message);
+    return rejectWithValue(message);
+  }
 });
 
-export const updatePaymentThunk = createAsyncThunk('payments/update', async ({ id, payment }: { id: number; payment: any }) => {
-  return await updatePayment(id, payment);
+export const updatePaymentThunk = createAsyncThunk('payments/update', async ({ id, payment }: { id: number; payment: any }, { rejectWithValue }) => {
+  try {
+    return await updatePayment(id, payment);
+  } catch (error: any) {
+    const message = error?.response?.data?.message || error?.message || 'Erro ao atualizar pagamento';
+    console.error('❌ updatePaymentThunk: Error', message);
+    return rejectWithValue(message);
+  }
 });
 
-export const deletePaymentThunk = createAsyncThunk('payments/delete', async (id: number) => {
-  return await deletePayment(id);
+export const deletePaymentThunk = createAsyncThunk('payments/delete', async (id: number, { rejectWithValue }) => {
+  try {
+    return await deletePayment(id);
+  } catch (error: any) {
+    const message = error?.response?.data?.message || error?.message || 'Erro ao deletar pagamento';
+    console.error('❌ deletePaymentThunk: Error', message);
+    return rejectWithValue(message);
+  }
 });
 
 const paymentSlice = createSlice({
